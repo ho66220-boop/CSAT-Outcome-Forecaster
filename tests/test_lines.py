@@ -47,3 +47,18 @@ def test_common_shift_widens_range_only():
     b = lines.line_stats(mu, sd, L, n_draw=4000, common_sd=10).iloc[0]
     assert a["예상_인원"] == b["예상_인원"]              # 학생별 확률은 그대로
     assert (b["상한_95"] - b["하한_5"]) > 1.5 * (a["상한_95"] - a["하한_5"])
+
+
+def test_one_subject_units_do_not_set_the_line():
+    b = units()
+    extra = b.iloc[[0, 1, 2]].copy()
+    extra["백분위배치컷"], extra["탐구수"] = 299, 1
+    b = lines.assign_groups(pd.concat([b, extra], ignore_index=True), CFG)
+    L = {x["g"]: x for x in lines.line_cuts(b, CFG)}
+    assert L["A"]["cut"]["인문"] == 272
+
+
+def test_line_stats_uses_given_thresholds():
+    L = [{"g": "X", "cut": {"인문": 250.0, "자연": None}}]
+    r = lines.line_stats([262], [12], L, n_draw=500, ok=0.9, warn=0.5).iloc[0]   # 도달 확률 약 0.84
+    assert r["안정"] == 0 and r["가능"] == 1

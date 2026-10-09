@@ -156,7 +156,7 @@ svg text{font-family:inherit;fill:var(--muted);font-size:11px}
 .gwrap{display:grid;gap:10px}
 .grow{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:end;gap:8px}
 .gname{font-size:13px;font-weight:600;padding-bottom:30px} .gname small{font-size:10.5px;color:var(--muted);font-weight:500}
-.gbars{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.gbars{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px}
 .gcol{display:flex;flex-direction:column;align-items:center;min-width:0}
 .track{height:40px;width:100%;display:flex;align-items:flex-end;border-bottom:1px solid var(--line)}
 .fill{width:100%;background:var(--bar);opacity:.45;border-radius:4px 4px 0 0} .fill.top{background:var(--bar-hi);opacity:1}
@@ -229,7 +229,7 @@ svg text{font-family:inherit;fill:var(--muted);font-size:11px}
     <section class="panel" aria-labelledby="h-line">
       <div class="ph"><h2 id="h-line">대학 라인별 도달 가능성</h2><div class="seg sm" role="group" aria-label="계열" id="segk"><button type="button" data-k="인문" aria-pressed="false">인문</button><button type="button" data-k="자연" aria-pressed="true">자연</button></div></div>
       <div style="overflow-x:auto"><table class="mtab" id="lntab"></table></div>
-      <div class="small">라인은 그룹 안 학과들의 배치컷 중앙값입니다. 국어·수학·탐구 백분위 합 기준이며 영어는 반영하지 않았습니다. 안정은 도달 가능성 80% 이상, 가능은 40~80%, 어려움은 40% 미만입니다. 숫자를 누르면 해당 학생 명단이 보입니다. 집계표(line_stats.csv)의 예상 인원은 학생별 가능성을 모두 더한 값이라 이 표의 안정·가능 인원과 다를 수 있습니다.</div>
+      <div class="small" id="lnnote"></div>
     </section>
     <section class="panel" aria-labelledby="h-grd">
       <div class="ph"><h2 id="h-grd">과목별 예상 등급</h2><span class="hint">칸을 누르면 해당 학생 명단이 보입니다</span></div>
@@ -240,7 +240,7 @@ svg text{font-family:inherit;fill:var(--muted);font-size:11px}
     <section class="panel" aria-labelledby="h-min">
       <div class="ph"><h2 id="h-min">수능 최저 점검</h2><span class="hint">숫자를 누르면 해당 학생 명단이 보입니다</span></div>
       <div style="overflow-x:auto"><table class="mtab" id="mtab"></table></div>
-      <div class="small">국어·수학·영어·탐구(상위 1과목) 중 n개 등급 합 기준. 안정은 충족 가능성 80% 이상, 경계 40~80%, 위험 40% 미만입니다. 과탐 필수나 수학 지정 조건이 있으면 한 단계 보수적으로 보세요.</div>
+      <div class="small" id="minnote"></div>
     </section>
     <section class="panel" aria-labelledby="h-bot">
       <div class="ph"><h2 id="h-bot">병목 과목</h2><span class="hint">막대를 누르면 해당 학생 명단이 보입니다</span></div>
@@ -267,7 +267,9 @@ const MONTHS = [["3","3월"],["4","4월"],["5","5월"],["6평","6평"],["7","7�
 const state = {g:"all", c:"기존 인원", k:"자연", q:"", sel:null, sort:{k:"sat", dir:-1}};
 function Phi(z){ const t=1/(1+0.2316419*Math.abs(z)), d=0.3989423*Math.exp(-z*z/2); const p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274)))); return z>0?1-p:p; }
 const reach=(s,cut,nt=2)=> 1-Phi((cut-(s.sat.p+(nt===1?s.sat.gap:0)))/s.sat.sd);
-const LJ=p=> p>=0.8?"ok":p>=0.4?"warn":"bad";
+const OK=(M.judge&&M.judge.ok!=null)?M.judge.ok:0.8, WARN=(M.judge&&M.judge.warn!=null)?M.judge.warn:0.4;
+const LJ=p=> p>=OK?"ok":p>=WARN?"warn":"bad";
+const PCT=v=> Math.round(v*100);
 const LL={ok:"안정",warn:"가능",bad:"어려움"};
 const pc=p=> p<0.01?"1% 미만":p>0.99?"99% 이상":Math.round(p*100)+"%";
 const lineCut=(g,k)=>{ const L=M.lines.find(x=>x.g===g); return L?L.cut[k]:null; };
@@ -277,7 +279,7 @@ const $ = s => document.querySelector(s);
 const NS = "http://www.w3.org/2000/svg";
 function el(tag, attrs={}, parent){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e; }
 const fmt = (v,d=1) => v==null ? "–" : Number(v).toFixed(d);
-const judge = p => p==null ? null : (p>=0.8 ? "ok" : p>=0.4 ? "warn" : "bad");
+const judge = p => p==null ? null : (p>=OK ? "ok" : p>=WARN ? "warn" : "bad");
 const JL = {ok:"안정", warn:"경계", bad:"위험"};
 const gcol = g => g==="고3" ? "var(--s-g)" : "var(--s-n)";
 const gchip = g => `<span class="gchip ${g==="고3"?"g":"n"}">${g}</span>`;
@@ -436,7 +438,7 @@ function openCard(s){
   $("#drawer").innerHTML=`
    <div class="dh"><div><div class="id" id="d-id">${s.id}</div><div class="meta">${gchip(s.g)}<span>${s.grp}</span>${s.chg?`<span>· 선택과목 변경: ${s.chg}</span>`:""}</div></div><button type="button" class="x" id="closeCard" aria-label="닫기">×</button></div>
    <div class="sec"><h3>성적 흐름 (백분위 합, 300점)</h3><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 성적 흐름">${g}</svg>
-     <div class="small">${hasP?"9평 위치의 음영은 9평 전에 고정해 둔 예측 범위, 가로 굵은 선은 예측값입니다.":""}${s.n9.act==null?" 9평 성적이 없습니다.":""}</div></div>
+     <div class="small">${hasP?"9평 위치의 음영은 9평 이전 시험만으로 만든 예측 범위, 가로 굵은 선은 예측값입니다.":""}${s.n9.act==null?" 9평 성적이 없습니다.":""}</div></div>
    ${has9(s)?`<div class="sec"><h3>9평 예측과 실제</h3><div class="pair">
      <div class="cell"><div class="l">예측</div><div class="v">${fmt(s.n9.pred)}</div></div>
      <div class="cell"><div class="l">실제</div><div class="v">${fmt(s.n9.act)}</div></div>
@@ -454,7 +456,8 @@ function openCard(s){
    ${s.gr?`<div class="sec"><h3>과목별 등급 흐름</h3><div style="overflow-x:auto"><table class="gtab"><thead><tr><th></th>${MONTHS.concat([["9평","9평"]]).map(m=>`<th>${m[1]}</th>`).join("")}<th title="가장 좋은 등급과 가장 낮은 등급의 차이">폭</th></tr></thead><tbody>${["국어","수학","영어","탐구"].map(k=>{ const v=s.gr[k]; const nn=v.filter(x=>x!=null); const w=nn.length>1?Math.max(...nn)-Math.min(...nn):null; return `<tr><td>${k}${k==="탐구"?'<small style="color:var(--muted);font-weight:500"> 상위1</small>':""}</td>${v.map(x=>`<td>${x==null?'<span class="na">·</span>':x}</td>`).join("")}<td class="${w!=null&&w>=2?"wide":""}">${w==null?"–":w}</td></tr>`; }).join("")}</tbody></table></div></div>`:""}
    ${eg?`<div class="sec"><h3>과목별 예상 등급</h3><div class="gwrap">${eg}</div><div class="small">막대 아래 숫자는 등급, 위 숫자는 그 등급이 나올 가능성입니다. 진한 막대가 가장 가능성 높은 등급입니다.</div></div>`:""}
    ${s.sat?`<div class="sec"><h3>최저 유형별 판정</h3><div class="pgroups">${minHtml}</div>
-     ${s.bott?`<div class="bott">병목 과목: <b>${s.bott}</b> · 최저를 놓친다면 이 과목 때문일 가능성이 가장 큽니다.</div>`:""}</div>`:""}`;
+     ${s.bott?`<div class="bott">병목 과목: <b>${s.bott}</b> · 최저를 놓친다면 이 과목 때문일 가능성이 가장 큽니다.</div>`:""}
+     <div class="small">과목을 지정하지 않은 일반 n합k 기준입니다. 수학 필수, 과탐 필수 같은 조건은 이 판정에 반영되지 않습니다.</div></div>`:""}`;
   $("#drawer").hidden=false; $("#scrim").hidden=false; $("#closeCard").focus();
   if($("#uq")) $("#uq").addEventListener("input",e=>renderUnits(s,e.target.value));
   $("#closeCard").addEventListener("click",closeCard);
@@ -484,6 +487,8 @@ document.querySelectorAll(".seg button[data-g]").forEach(b=>b.addEventListener("
 document.querySelectorAll("#segc button").forEach(b=>b.addEventListener("click",()=>{ state.c=b.dataset.c; document.querySelectorAll("#segc button").forEach(x=>x.setAttribute("aria-pressed",x===b)); state.sel=null; render(); }));
 $("#q").addEventListener("input",e=>{ state.q=e.target.value.trim(); renderList(pool()); });
 document.querySelectorAll("#segk button").forEach(b=>b.addEventListener("click",()=>{ state.k=b.dataset.k; document.querySelectorAll("#segk button").forEach(x=>x.setAttribute("aria-pressed",x===b)); if(state.sel&&state.sel.type==="line") state.sel=null; render(); }));
+$("#lnnote").textContent=`라인은 그룹 안 학과(탐구 2과목 반영)들의 배치컷 중앙값입니다. 국어, 수학, 탐구 백분위 합 기준이며 영어는 반영하지 않았습니다. 안정은 도달 가능성 ${PCT(OK)}% 이상, 가능은 ${PCT(WARN)}% 이상 ${PCT(OK)}% 미만, 어려움은 ${PCT(WARN)}% 미만입니다. 숫자를 누르면 해당 학생 명단이 보입니다. 집계표(line_stats.csv)의 예상 인원은 학생별 가능성을 모두 더한 값이라 이 표의 안정, 가능 인원과 다를 수 있습니다.`;
+$("#minnote").textContent=`국어, 수학, 영어, 탐구(상위 1과목) 중 좋은 n개 등급 합 기준입니다. 안정은 충족 가능성 ${PCT(OK)}% 이상, 경계는 ${PCT(WARN)}% 이상 ${PCT(OK)}% 미만, 위험은 ${PCT(WARN)}% 미만입니다. 수학 필수, 과탐 필수처럼 과목을 지정한 최저는 이 판정으로 알 수 없으니 성적표로 따로 확인하세요.`;
 function render(){ const P=pool(), Pm=P.filter(s=>s.sat); renderKPI(Pm); renderLines(Pm); renderGrades(Pm); renderMin(Pm); renderBott(Pm); renderList(P); }
 render();
 let rz; addEventListener("resize",()=>{ clearTimeout(rz); rz=setTimeout(()=>{ const P=pool().filter(s=>s.sat); renderGrades(P); renderBott(P); },150); });

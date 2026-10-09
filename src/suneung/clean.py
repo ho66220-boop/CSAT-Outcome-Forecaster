@@ -30,21 +30,34 @@ def long_scores(df):
 
 
 def _duplicate_std(g, val):
+    """같은 표준점수 안에서 값이 갈리면, 확실한 다수 값으로 보정합니다.
+    다수가 없으면(예: 2명이 서로 다름) 앞뒤 표준점수의 값과 순서가 맞는 후보가 하나뿐일 때만 그 값으로 보정하고,
+    그래도 정할 수 없으면 확인 필요로 둡니다."""
+    sign = 1 if val == "pct" else -1                      # 백분위는 표준점수와 같은 방향, 등급은 반대
+    others = g.groupby("std")[val].agg(lambda s: s.mode().iloc[0] if s.notna().any() else np.nan).dropna()
     out = []
     for std, h in g.groupby("std"):
         vals = h[val].dropna()
         if vals.nunique() <= 1:
             continue
         vc = vals.value_counts()
-        clear = vc.iloc[0] > vc.iloc[1:].sum()
+        fix, why = None, None
+        if vc.iloc[0] > vc.iloc[1:].sum():
+            fix, why = vc.index[0], f"같은 표준점수 {len(vals)}명 중 {vc.iloc[0]}명이 {vc.index[0]:g}"
+        else:
+            lower, upper = others[others.index < std] * sign, others[others.index > std] * sign
+            lo = lower.max() if len(lower) else -np.inf
+            hi = upper.min() if len(upper) else np.inf
+            fit = [v for v in vc.index if lo <= v * sign <= hi]
+            if len(fit) == 1:
+                fix, why = fit[0], f"같은 표준점수 {len(vals)}명의 값이 갈림, 앞뒤 표준점수와 순서가 맞는 값은 {fit[0]:g}"
         for _, r in h.iterrows():
-            if clear and r[val] == vc.index[0]:
+            if fix is not None and r[val] == fix:
                 continue
             out.append(dict(row=r["row"], 학번=r["학번"], 시험명=r["시험명"], 과목=r["과목"], 열=r[val + "_col"],
-                            표준점수=std, 값=r[val],
-                            처리="보정" if clear else "확인 필요",
-                            수정값=vc.index[0] if clear else np.nan,
-                            근거=f"같은 표준점수 {len(vals)}명 중 {vc.iloc[0]}명이 {vc.index[0]:g}"))
+                            표준점수=std, 값=r[val], 처리="보정" if fix is not None else "확인 필요",
+                            수정값=fix if fix is not None else np.nan,
+                            근거=why or f"같은 표준점수 {len(vals)}명의 값이 갈려 어느 쪽이 맞는지 알 수 없음"))
     return out
 
 
@@ -93,11 +106,45 @@ def find_issues(df):
     return res.drop_duplicates(subset=["row", "열"]).reset_index(drop=True)
 
 
-def apply_auto_fixes(df, issues):
-    d = df.copy()
-    for _, r in issues[issues["처리"] == "보정"].iterrows():
+UNRESOLVED = "확인 필요 (지표에서 제외)"
+
+
+def apply_auto_fixes(df, issues, exclude_unresolved=True):
+    """'보정'은 다수 값으로 바꾸고, '확인 필요'는 기본적으로 그 값을 비워 지표 계산에서 뺍니다.
+    원본 파일은 그대로 두고 작업용 표에만 적용합니다. 바뀐 처리 내용을 담은 issues 사본도 돌려줍니다."""
+    d, iss = df.copy(), issues.copy()
+    for _, r in iss[iss["처리"] == "보정"].iterrows():
         d.at[r["row"], r["열"]] = r["수정값"]
-    return d
+    if exclude_unresolved:
+        m = iss["처리"] == "확인 필요"
+        for _, r in iss[m].iterrows():
+            d.at[r["row"], r["열"]] = np.nan
+        iss.loc[m, "처리"] = UNRESOLVED
+    return d, iss
+
+
+def dedupe(df, key=("학번", "시험명")):
+    """같은 학생·같은 시험이 여러 행이면 정리합니다.
+    값이 서로 겹치지 않으면(한 행의 빈칸을 다른 행이 채우는 경우) 한 행으로 합치고,
+    같은 칸에 서로 다른 값이 있으면 어느 쪽이 맞는지 알 수 없으므로 그 시험 기록을 빼고 기록합니다."""
+    key = list(key)
+    dup = df.duplicated(key, keep=False)
+    if not dup.any():
+        return df.reset_index(drop=True), pd.DataFrame(columns=["학번", "시험명", "열", "값", "처리", "근거"])
+    keep, log = [df[~dup]], []
+    for k, g in df[dup].groupby(key, sort=False):
+        conflict = [c for c in df.columns if c not in key and g[c].dropna().nunique() > 1]
+        if conflict:
+            log.append(dict(학번=k[0], 시험명=k[1], 열=", ".join(conflict), 값="", 처리="중복 제외 (확인 필요)",
+                            근거=f"같은 시험 {len(g)}행의 값이 서로 다름"))
+            continue
+        merged = g.iloc[[0]].copy()
+        for c in df.columns:
+            v = g[c].dropna()
+            merged[c] = v.iloc[0] if len(v) else np.nan
+        keep.append(merged)
+        log.append(dict(학번=k[0], 시험명=k[1], 열="", 값="", 처리="중복 합침", 근거=f"같은 시험 {len(g)}행, 값 충돌 없음"))
+    return pd.concat(keep).reset_index(drop=True), pd.DataFrame(log)
 
 
 def apply_manual_fixes(df, fixes):
@@ -120,6 +167,9 @@ def merge_versions(new, old, key=("학번", "시험명")):
     """새 파일 값을 우선하고, 새 파일에서 비어 있는 칸은 이전 파일 값으로 채웁니다.
     바뀐 칸을 모두 기록해 돌려줍니다."""
     key = list(key)
+    for name, f in (("새 파일", new), ("이전 파일", old)):
+        if f.duplicated(key).any():
+            raise ValueError(f"{name}에 같은 학생·시험 행이 중복돼 있습니다. clean.dedupe 로 먼저 정리하세요.")
     n, o = new.set_index(key), old.set_index(key)
     merged = n.combine_first(o)
     log = []
@@ -134,6 +184,8 @@ def merge_versions(new, old, key=("학번", "시험명")):
             a, b = o.at[idx, c], n.at[idx, c]
             if pd.isna(b) and pd.notna(a):
                 log.append(dict(학번=idx[0], 시험명=idx[1], 열=c, 이전=a, 새값="", 내용="새 파일 빈칸을 이전 값으로 채움"))
+            elif pd.isna(a) and pd.notna(b):
+                log.append(dict(학번=idx[0], 시험명=idx[1], 열=c, 이전="", 새값=b, 내용="이전 빈칸에 새 값"))
             elif pd.notna(a) and pd.notna(b) and a != b:
                 log.append(dict(학번=idx[0], 시험명=idx[1], 열=c, 이전=a, 새값=b, 내용="값 변경"))
     out = merged.reset_index()

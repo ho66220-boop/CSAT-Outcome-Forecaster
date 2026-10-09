@@ -159,10 +159,15 @@ def inject_errors(curr, rng):
         return d[cnt >= min_n]
 
     def unique_rows(exam, std_col, sub_col=None):
+        """그 시험에서 같은 과목, 같은 표준점수가 이 행 하나뿐인 행 (탐구는 탐1, 탐2 칸을 합쳐서 셉니다)."""
         d = curr[(curr["시험명"] == exam) & curr[std_col].notna()]
-        key = [std_col] + ([sub_col] if sub_col else [])
-        cnt = d.groupby(key)[std_col].transform("size")
-        return d[cnt == 1]
+        if sub_col is None:
+            cnt = d.groupby(std_col)[std_col].transform("size")
+            return d[cnt == 1]
+        e = curr[curr["시험명"] == exam]
+        both = pd.concat([e[["탐1", "탐1표"]].set_axis(["s", "t"], axis=1), e[["탐2", "탐2표"]].set_axis(["s", "t"], axis=1)]).dropna()
+        n = both.groupby(["s", "t"]).size()
+        return d[[n.get((a, b), 0) == 1 for a, b in zip(d[sub_col], d[std_col])]]
 
     def change(idx, col, new, kind, expect):
         old = curr.at[idx, col]

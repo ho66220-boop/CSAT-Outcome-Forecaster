@@ -41,7 +41,11 @@ def load_scores(path, sheet=None):
         raise ValueError(f"{path}: 열 구성을 알 수 없습니다 ({d.shape[1]}열). data/README.md 의 형식을 확인하세요.")
     d["시험명"] = d["시험명"].astype(str).str.strip().replace(EXAM_ALIASES)
     d = d[d["학번"].notna()].copy()
-    d["학번"] = pd.to_numeric(d["학번"], errors="coerce").astype("Int64")
+    sid = pd.to_numeric(d["학번"], errors="coerce")
+    bad = d.loc[sid.isna(), "학번"]
+    if len(bad):
+        raise ValueError(f"{path}: 학번이 숫자가 아닌 행이 {len(bad)}개 있습니다 (예: {', '.join(map(str, bad.head(3)))}). 원본을 확인하세요.")
+    d["학번"] = sid.astype("Int64")
     for c in NUMERIC_COLS:
         d[c] = pd.to_numeric(d[c], errors="coerce").astype(float)
         d.loc[d[c] == 0, c] = np.nan

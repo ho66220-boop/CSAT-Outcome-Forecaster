@@ -47,20 +47,23 @@ def usable_units(B, cfg):
 
 
 def line_cuts(B, cfg):
+    """그룹별, 계열별 배치컷 중앙값. 탐구 1과목 반영 학과의 컷은 '국+수+탐 상위 1과목' 기준이라 체계적으로 높으므로
+    기본값으로 탐구 2과목 반영 학과만 씁니다 (설정 line_tam_counts). 1과목 학과는 학과 검색에서 학생별 보정과 함께 씁니다."""
     excl = B["전형명"].astype(str).str.contains(cfg["exclude_admission_regex"])
+    tam = B["탐구수"].isin(cfg.get("line_tam_counts", [2]))
     lines = []
     for G in cfg["groups"]:
         row = {"g": G["name"], "cut": {}, "n": {}}
         for k, tracks in TRACKS.items():
-            x = B[(B["그룹"] == G["name"]) & ~excl & B["계열"].isin(tracks)]["백분위배치컷"].dropna()
+            x = B[(B["그룹"] == G["name"]) & ~excl & tam & B["계열"].isin(tracks)]["백분위배치컷"].dropna()
             row["cut"][k] = float(np.median(x)) if len(x) >= cfg.get("min_units", 3) else None
             row["n"][k] = int(len(x))
         lines.append(row)
     return lines
 
 
-def line_stats(mu, sd, lines, n_draw=4000, seed=21, cap=300, common_sd=0.0):
-    """집단 집계: 예상 인원(확률 합), 90% 범위(시뮬레이션), 안정(≥80%)·가능(40~80%) 인원.
+def line_stats(mu, sd, lines, n_draw=4000, seed=21, cap=300, common_sd=0.0, ok=0.8, warn=0.4):
+    """집단 집계: 예상 인원(확률 합), 90% 범위(시뮬레이션), 안정(ok 이상)과 가능(warn 이상 ok 미만) 인원.
 
     common_sd 는 그해 수능 난이도처럼 모든 학생을 같은 방향으로 움직이는 공통 이동의 표준편차입니다.
     학생별 전체 σ는 그대로 두고 그중 일부를 공통 이동으로 나누므로, 학생별 확률과 예상 인원은
@@ -68,10 +71,10 @@ def line_stats(mu, sd, lines, n_draw=4000, seed=21, cap=300, common_sd=0.0):
     """
     mu, sd = np.asarray(mu, float), np.asarray(sd, float)
     rng = np.random.default_rng(seed)
-    c = np.minimum(float(common_sd), sd)
-    ind = np.sqrt(sd ** 2 - c ** 2)
+    shared = np.minimum(float(common_sd), sd)
+    ind = np.sqrt(sd ** 2 - shared ** 2)
     shock = rng.standard_normal((n_draw, 1))
-    draws = np.minimum(cap, mu[None, :] + c[None, :] * shock + ind[None, :] * rng.standard_normal((n_draw, len(mu))))
+    draws = np.minimum(cap, mu[None, :] + shared[None, :] * shock + ind[None, :] * rng.standard_normal((n_draw, len(mu))))
     rows = []
     for L in lines:
         for k in TRACKS:
@@ -82,7 +85,7 @@ def line_stats(mu, sd, lines, n_draw=4000, seed=21, cap=300, common_sd=0.0):
             cnt = (draws >= c).sum(axis=1)
             rows.append(dict(라인=L["g"], 계열=k, 배치컷=c, n=len(mu), 예상_인원=float(P.sum()),
                              하한_5=float(np.percentile(cnt, 5)), 상한_95=float(np.percentile(cnt, 95)),
-                             안정=int((P >= .8).sum()), 가능=int(((P >= .4) & (P < .8)).sum())))
+                             안정=int((P >= ok).sum()), 가능=int(((P >= warn) & (P < ok)).sum())))
     return pd.DataFrame(rows)
 
 

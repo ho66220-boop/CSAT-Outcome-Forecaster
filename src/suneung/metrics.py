@@ -1,6 +1,5 @@
 """지표 계산: 백분위 합(300점), 표준점수 합, z 변환, 등급 변환."""
 import numpy as np
-import pandas as pd
 from scipy.stats import norm
 
 # 상대평가 등급 누적 비율(%) 4, 11, 23, 40, 60, 77, 89, 96 에 해당하는 z 하한 (1등급부터)

@@ -60,12 +60,22 @@ def features(df, exams, ids=None, target=None, adj=None):
         v = g[g["영등"].notna()]
         ee = [a("영", e, x) for e, x in zip(v["시험명"], v["영등"])]
         r["영_x"] = np.mean(ee) if ee else np.nan
-        # 탐구: 결과 시험(또는 가장 최근 시험)의 두 과목을 기준으로, 같은 과목 기록의 평균
+        # 탐구: 입력 시험 중 가장 최근 시험의 두 과목을 기준으로, 같은 과목 기록의 평균을 씁니다.
+        # 예측 시점에 알 수 있는 정보만 쓰도록 결과 시험의 과목 기록은 입력에 쓰지 않습니다.
+        # 결과 시험이 있으면 과목명은 탐1/탐2 칸을 맞추는 데만 씁니다 (과목을 바꾼 학생은 바꾸기 전 과목 기록을 씀).
+        last = g.assign(o=g["시험명"].map(EXAM_ORDER)).sort_values("o").iloc[-1]
+        latest = [last["탐1"], last["탐2"]]
+        subs = latest
         if tg is not None and sid in tg.index:
-            subs = [tg.at[sid, "탐1"], tg.at[sid, "탐2"]]
-        else:
-            last = g.assign(o=g["시험명"].map(EXAM_ORDER)).sort_values("o").iloc[-1]
-            subs = [last["탐1"], last["탐2"]]
+            want = [tg.at[sid, "탐1"], tg.at[sid, "탐2"]]
+            subs, rest = [None, None], [x for x in latest]
+            for k, w in enumerate(want):
+                if w in rest:
+                    subs[k] = w
+                    rest.remove(w)
+            for k in range(2):
+                if subs[k] is None:
+                    subs[k] = rest.pop(0) if rest else None
         t = pd.concat([g[["시험명", "탐1", "탐1백"]].set_axis(["e", "s", "p"], axis=1),
                        g[["시험명", "탐2", "탐2백"]].set_axis(["e", "s", "p"], axis=1)])
         t = t[t["p"].notna()]
@@ -88,22 +98,35 @@ def features(df, exams, ids=None, target=None, adj=None):
 
 def loo_residuals(D):
     """과목별 계수(전체 학습)와 LOO 잔차(학생을 빼고 맞춘 직선으로 그 학생을 예측한 오차)."""
+    from .total_model import loo_pred
     coef, res = {}, {}
     for s in SUBJ:
         ok = D[[s + "_x", s + "_y"]].dropna()
         coef[s] = np.polyfit(ok[s + "_x"], ok[s + "_y"], 1)
-        p = pd.Series(np.nan, index=D.index)
-        for i in ok.index:
-            t = ok.drop(i)
-            p[i] = np.polyval(np.polyfit(t[s + "_x"], t[s + "_y"], 1), ok.at[i, s + "_x"])
-        res[s] = D[s + "_y"] - p
+        e = pd.Series(np.nan, index=D.index)
+        e[ok.index] = ok[s + "_y"].values - loo_pred(ok[s + "_x"].values, ok[s + "_y"].values)
+        res[s] = e
     return coef, pd.DataFrame(res)
 
 
+def nearest_corr(R, eps=1e-6):
+    """상관행렬을 양의 정부호로 맞춥니다. 결측이 섞인 잔차의 쌍별 상관은 양의 정부호가 아닐 수 있어
+    고윳값을 eps 이상으로 올린 뒤 대각을 1로 다시 맞춥니다."""
+    R = np.nan_to_num(np.asarray(R, float), nan=0.0)
+    R = (R + R.T) / 2
+    np.fill_diagonal(R, 1.0)
+    w, V = np.linalg.eigh(R)
+    if w.min() >= eps:
+        return R
+    R = V @ np.diag(np.maximum(w, eps)) @ V.T
+    d = np.sqrt(np.diag(R))
+    return R / d[:, None] / d[None, :]
+
+
 def spread(res):
-    """잔차표에서 과목별 표준편차와 상관행렬."""
+    """잔차표에서 과목별 표준편차와 (양의 정부호로 맞춘) 상관행렬."""
     sig = {s: float(np.sqrt(np.nanmean(res[s] ** 2))) for s in SUBJ}
-    return sig, res[SUBJ].corr().values
+    return sig, nearest_corr(res[SUBJ].corr().values)
 
 
 def train(D):
@@ -199,33 +222,37 @@ def student_result(sid, row, coef, sig, R, n_sim=6000, ok=0.8, warn=0.4, compare
         if compare:
             res["bott_alt"] = {"한 등급 하락": SUBN[bott_one_grade(G, border)],
                                "1σ 하락": SUBN[bott_one_sigma(mu, sig, R, seed, border, n_sim)]}
-    gd = {"국어": grade_dist(mu["국"], sig["국"]), "수학": grade_dist(mu["수"], sig["수"]),
-          "영어": grade_dist(mu["영"], sig["영"], eng=True)}
-    c1, c2 = np.cumsum(grade_dist(mu["탐1"], sig["탐1"])), np.cumsum(grade_dist(mu["탐2"], sig["탐2"]))
-    gd["탐구"] = np.diff(np.concatenate([[0], 1 - (1 - c1) * (1 - c2)]))   # 두 과목 독립 가정
-    res["gd"] = {k: [round(float(x), 3) for x in v[:6]] for k, v in gd.items()}
+    # 과목별 예상 등급 분포(1~9등급)는 최저 판정과 같은 시뮬레이션에서 셉니다. 탐구 두 과목의 상관도 그대로 반영됩니다.
+    res["gd"] = {SUBN[k]: [round(float(x), 3) for x in np.bincount(G[k], minlength=10)[1:10] / len(G[k])] for k in G}
     return res
 
 
 def backtest(D, n_sim=3000, ok=0.8, warn=0.4):
-    """전년도 LOO 백테스트. 학생마다 그 학생을 빼고 계수를 다시 맞추고, σ와 상관행렬도
-    그 학생의 잔차를 뺀 나머지로 다시 계산한 뒤, 판정 구간별 실제 충족 비율을 봅니다."""
-    _, res = loo_residuals(D)
+    """전년도 백테스트 (중첩 LOO). 학생 i마다 i를 완전히 뺀 나머지 학생들만으로 계수를 맞추고,
+    그 안에서 다시 LOO 잔차를 구해 σ와 상관행렬을 추정한 뒤 i의 최저 충족 확률을 계산합니다.
+    i의 실제 수능 결과는 i 자신의 확률 계산 어디에도 들어가지 않습니다."""
     recs = []
     for sid, r in D.iterrows():
         if any(pd.isna(r[s + "_x"]) or pd.isna(r[s + "_y"]) or pd.isna(r[s + "_g"]) for s in SUBJ):
             continue
-        mu = {}
-        for s in SUBJ:
-            okd = D[[s + "_x", s + "_y"]].dropna().drop(sid, errors="ignore")
-            mu[s] = np.polyval(np.polyfit(okd[s + "_x"], okd[s + "_y"], 1), r[s + "_x"])
-        sig, R = spread(res.drop(sid))
+        rest = D.drop(sid)
+        coef, res = loo_residuals(rest)
+        sig, R = spread(res)
+        mu = mu_of(coef, r)
         P = pattern_probs(draws(mu, sig, R, n_sim, int(sid) % 9973))
         act = {"국": np.array(r["국_g"]), "수": np.array(r["수_g"]), "영": np.array(r["영_g"]),
                "탐": np.array(min(r["탐1_g"], r["탐2_g"]))}
         for nm, n, k in PATTERNS:
             recs.append(dict(학번=sid, 유형=nm, p=P[nm], 판정=judge(P[nm], ok, warn), 실제=bool(meet(act, n, k))))
     return pd.DataFrame(recs)
+
+
+def backtest_summary(bt):
+    """판정 구간별 요약. 학생 수와 판정 건수(학생 × 유형)를 함께 적습니다."""
+    if bt.empty:
+        return pd.DataFrame(columns=["판정", "학생", "건수", "평균_예측", "실제_충족"])
+    g = bt.groupby("판정").agg(학생=("학번", "nunique"), 건수=("실제", "size"), 평균_예측=("p", "mean"), 실제_충족=("실제", "mean"))
+    return g.reindex(["안정", "경계", "위험"]).reset_index()
 
 
 def private_adjust(prev, curr):

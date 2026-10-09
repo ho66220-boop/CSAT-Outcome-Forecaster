@@ -53,3 +53,26 @@ def test_grade_conversions_agree():
     pct = np.array([99, 96, 95, 89, 88, 60, 59, 4, 3])
     assert list(grade_from_pct(pct)) == [1, 1, 2, 2, 3, 4, 5, 8, 9]
     assert list(grade_from_z(z_of([99, 50, 2]))) == [1, 5, 9]
+
+
+def test_nested_loo_has_no_leak_from_own_outcome():
+    rng = np.random.default_rng(3)
+    x = rng.normal(250, 20, 40)
+    y = 10 + 0.9 * x + rng.normal(0, 15, 40)
+    a = error_model.nested_loo(x, y)
+    y2 = y.copy()
+    y2[5] += 40
+    b = error_model.nested_loo(x, y2)
+    assert a[0][5] == b[0][5] and np.allclose(a[1][5], b[1][5]) and a[2][5] == b[2][5]
+
+
+def test_weight_scan_endpoints_match_comparison():
+    rng = np.random.default_rng(4)
+    n = 60
+    a = rng.normal(240, 25, n)
+    W = pd.DataFrame({"3": a + rng.normal(0, 10, n), "6평": a + rng.normal(0, 10, n),
+                      "9평": a + rng.normal(0, 10, n), "수능": a + rng.normal(0, 12, n)})
+    comp, ci = total_model.compare_inputs(W, n_boot=500)
+    ws = total_model.weight_scan(W).set_index("가중치")
+    assert ws.loc[0.0, "LOO_RMSE"] == comp.set_index("입력").loc["3~6월", "LOO_RMSE"]
+    assert {"비교", "n", "RMSE_차이", "하한_95", "상한_95"} <= set(ci.columns)
