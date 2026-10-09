@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__TITLE__</title>
+<style>
+__FONTFACE__
+:root{
+  color-scheme: light;
+  --ground:#f3f4f6; --surface:#ffffff; --surface-2:#f7f8fa;
+  --ink:#1a1d21; --ink-2:#4b5159; --muted:#7a818b; --line:#e1e4e8; --line-2:#eceef1;
+  --accent:#1f3a5c; --accent-soft:#e8edf4; --focus:#2a78d6;
+  --s-n:#2a78d6; --s-g:#eb6834;
+  --band:#e6ecf5; --bar:#3b5b82; --bar-hi:#1f3a5c;
+  --ok:#0ca30c; --ok-bg:#e7f6e7; --warn:#fab219; --warn-bg:#fdf3dc; --bad:#d03b3b; --bad-bg:#fbe7e7;
+  --shadow:0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+  --g1:#1f3a5c; --g2:#2f5f93; --g3:#5b88bf; --g4:#93b3da; --g5:#c3d5ec; --g6:#e3ecf7; --g-ink-dark:#ffffff;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --ground:#121417; --surface:#1b1e22; --surface-2:#22262b;
+    --ink:#eef0f3; --ink-2:#c3c8cf; --muted:#8d949e; --line:#2f343a; --line-2:#272b30;
+    --accent:#9db7da; --accent-soft:#243246; --focus:#5b9cf0;
+    --s-n:#3987e5; --s-g:#d95926;
+    --band:#243246; --bar:#6f8fb8; --bar-hi:#9db7da;
+    --ok-bg:#16301a; --warn-bg:#342a12; --bad-bg:#3a1b1b;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --ground:#121417; --surface:#1b1e22; --surface-2:#22262b;
+  --ink:#eef0f3; --ink-2:#c3c8cf; --muted:#8d949e; --line:#2f343a; --line-2:#272b30;
+  --accent:#9db7da; --accent-soft:#243246; --focus:#5b9cf0;
+  --s-n:#3987e5; --s-g:#d95926;
+  --band:#243246; --bar:#6f8fb8; --bar-hi:#9db7da;
+  --ok-bg:#16301a; --warn-bg:#342a12; --bad-bg:#3a1b1b;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ground);color:var(--ink);font-family:Pretendard,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:14px;line-height:1.55;padding-inline:20px;padding-block:0 40px;font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* 머리 */
+header.top{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between;padding-block:22px 16px}
+.eyebrow{font-size:12px;color:var(--muted);letter-spacing:.02em}
+h1{font-size:22px;font-weight:700;margin:2px 0 0;letter-spacing:-.01em;text-wrap:balance}
+.sub{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px}
+.seg button{border:0;background:transparent;padding:5px 12px;border-radius:6px;cursor:pointer;color:var(--ink-2);font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer}
+.search{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0 10px}
+.search input{border:0;background:transparent;padding:7px 0;width:120px;font:inherit;color:var(--ink);outline:none}
+.search:focus-within{outline:2px solid var(--focus);outline-offset:1px}
+.note{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:8px 12px;margin-bottom:14px}
+.note b{color:var(--bad);font-weight:600}
+
+/* 요약 수치 */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .l{font-size:12.5px;color:var(--ink-2)}
+.kpi .v{font-size:26px;font-weight:700;letter-spacing:-.01em;margin-top:2px;line-height:1.2}
+.kpi .v small{font-size:14px;font-weight:600;color:var(--ink-2);margin-left:2px}
+.kpi .d{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* 본문 격자 */
+.grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:14px;align-items:start}
+.col{display:grid;gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow);min-width:0}
+.ph{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px;margin-bottom:8px}
+.ph h2{font-size:15px;font-weight:700;margin:0}
+.ph .hint{font-size:12px;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink-2);margin-top:4px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
+.legend i.band{border-radius:2px;background:var(--band);width:14px}
+.stats{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12.5px;color:var(--ink-2);margin-top:8px}
+.stats b{color:var(--ink);font-weight:600}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:inherit;fill:var(--muted);font-size:11px}
+.axis line,.axis path{stroke:var(--line)}
+.gridl{stroke:var(--line-2)}
+.dot{cursor:pointer;stroke:var(--surface);stroke-width:1.5}
+.dot:hover,.dot.sel{stroke:var(--ink);stroke-width:2}
+.bar{fill:var(--bar);cursor:pointer}
+.bar:hover,.bar.sel{fill:var(--bar-hi)}
+.barlab{fill:var(--ink-2);font-size:11px;font-weight:600}
+.seg{cursor:pointer;stroke:var(--surface);stroke-width:2}
+.seg:hover,.seg.sel{stroke:var(--ink);stroke-width:2}
+.seglab{font-size:11px;font-weight:600;pointer-events:none}
+.legend i.sq{border-radius:2px}
+
+/* 최저 표 */
+.mtab{width:100%;border-collapse:collapse;font-size:13px}
+.mtab th{font-size:12px;font-weight:600;color:var(--ink-2);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line)}
+.mtab th:first-child{text-align:left}
+.mtab td{padding:5px 8px;border-bottom:1px solid var(--line-2);text-align:right}
+.mtab td:first-child{text-align:left;font-weight:600;white-space:nowrap}
+.mtab tr.gstart td{border-top:1.5px solid var(--line)}
+.cellbtn{border:0;background:transparent;cursor:pointer;padding:3px 8px;border-radius:6px;min-width:44px;text-align:right;font-weight:600}
+.cellbtn:hover{background:var(--surface-2)}
+.cellbtn.sel{outline:2px solid var(--accent)}
+.cellbtn .u{font-weight:400;color:var(--muted);font-size:11px;margin-left:1px}
+.mini{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;min-width:90px}
+.mini span{display:block;height:100%}
+.st{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;color:var(--ink);white-space:nowrap}
+.st::before{content:"";width:7px;height:7px;border-radius:50%}
+.st.ok{background:var(--ok-bg)} .st.ok::before{background:var(--ok)}
+.st.warn{background:var(--warn-bg)} .st.warn::before{background:var(--warn)}
+.st.bad{background:var(--bad-bg)} .st.bad::before{background:var(--bad)}
+
+/* 목록 */
+.listp{position:sticky;top:12px}
+.listp .ph h2{font-size:15px}
+.sel-title{font-size:13px;color:var(--ink-2);margin:-2px 0 8px}
+.sel-title b{color:var(--ink)}
+.clear{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer;color:var(--ink-2)}
+.tblwrap{overflow:auto;max-height:640px;border-top:1px solid var(--line)}
+.ltab{width:100%;border-collapse:collapse;font-size:13px}
+.ltab th{position:sticky;top:0;background:var(--surface);font-size:12px;font-weight:600;color:var(--ink-2);text-align:right;padding:7px 8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+.ltab th:first-child,.ltab td:first-child{text-align:left}
+.ltab td{padding:6px 8px;border-bottom:1px solid var(--line-2);text-align:right;white-space:nowrap}
+.ltab tbody tr{cursor:pointer}
+.ltab tbody tr:hover{background:var(--surface-2)}
+.gchip{display:inline-block;font-size:11px;font-weight:600;padding:0 6px;border-radius:4px;border:1px solid currentColor}
+.gchip.n{color:var(--s-n)} .gchip.g{color:var(--s-g)}
+.tag7{font-size:10.5px;color:var(--muted);margin-left:4px}
+.empty{color:var(--muted);font-size:13px;padding:16px 0;text-align:center}
+
+/* 학생 카드 */
+.scrim{position:fixed;inset:0;background:rgba(10,14,20,.35)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--surface);border-left:1px solid var(--line);overflow:auto;padding:20px 22px calc(28px + env(safe-area-inset-bottom,0px));box-shadow:-8px 0 24px rgba(10,14,20,.12)}
+.dh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.dh .id{font-size:22px;font-weight:700}
+.dh .meta{display:flex;gap:6px;align-items:center;margin-top:4px;font-size:12.5px;color:var(--ink-2)}
+.x{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:18px;line-height:1}
+.sec{margin-top:18px}
+.sec h3{font-size:13px;font-weight:700;margin:0 0 8px;color:var(--ink)}
+.pair{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cell{background:var(--surface-2);border-radius:8px;padding:9px 11px}
+.cell .l{font-size:11.5px;color:var(--muted)}
+.cell .v{font-size:18px;font-weight:700}
+.cell .v small{font-size:12px;font-weight:500;color:var(--ink-2)}
+.pgroups{display:grid;gap:6px}
+.chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+@media (max-width:480px){.chips{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pchip{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12.5px}
+.pchip b{font-weight:700}
+.grades{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.gwrap{display:grid;gap:10px}
+.grow{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:end;gap:8px}
+.gname{font-size:13px;font-weight:600;padding-bottom:30px} .gname small{font-size:10.5px;color:var(--muted);font-weight:500}
+.gbars{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.gcol{display:flex;flex-direction:column;align-items:center;min-width:0}
+.track{height:40px;width:100%;display:flex;align-items:flex-end;border-bottom:1px solid var(--line)}
+.fill{width:100%;background:var(--bar);opacity:.45;border-radius:4px 4px 0 0} .fill.top{background:var(--bar-hi);opacity:1}
+.pc{font-size:10.5px;color:var(--ink-2);margin-top:2px;height:15px} .gk{font-size:11px;color:var(--muted)}
+.gtab{width:100%;border-collapse:collapse;font-size:13px}
+.gtab th{font-size:11.5px;font-weight:600;color:var(--muted);padding:4px 6px;text-align:center;border-bottom:1px solid var(--line)}
+.gtab td{padding:5px 6px;text-align:center;border-bottom:1px solid var(--line-2)}
+.gtab td:first-child{text-align:left;font-weight:600;white-space:nowrap}
+.gtab td:last-child,.gtab th:last-child{border-left:1px solid var(--line)}
+.gtab td.wide{font-weight:700;color:var(--ink);background:var(--warn-bg)}
+.gtab .na{color:var(--muted)}
+.bott{margin-top:8px;font-size:13px;color:var(--ink-2)}
+.bott b{color:var(--ink)}
+.small{font-size:12px;color:var(--muted);margin-top:6px}
+.seg.sm button{padding:3px 10px;font-size:12.5px}
+.mtab .u{font-weight:400;color:var(--muted);font-size:11px;margin-left:1px}
+.lgt,.utab{width:100%;border-collapse:collapse;font-size:13px}
+.lgt th,.utab th{font-size:11.5px;font-weight:600;color:var(--muted);padding:4px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+.lgt th:first-child,.lgt td:first-child,.utab th:first-child,.utab td:first-child{text-align:left}
+.lgt td,.utab td{padding:5px 6px;border-bottom:1px solid var(--line-2);text-align:right;white-space:nowrap}
+.lgt td:first-child{font-weight:600}
+.lgt .c{color:var(--muted);font-size:11.5px;margin-right:6px}
+.utab td:first-child{white-space:normal}
+.utab .un{font-weight:600} .utab .us{font-size:11.5px;color:var(--muted)}
+.tagx{font-size:10.5px;color:var(--ink-2);border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:4px}
+.usearch{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:0 10px;margin:12px 0 6px;background:var(--surface)}
+.usearch input{border:0;background:transparent;padding:7px 0;width:100%;font:inherit;color:var(--ink);outline:none}
+.usearch:focus-within{outline:2px solid var(--focus);outline-offset:1px}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--surface);font-size:12px;padding:6px 9px;border-radius:6px;line-height:1.45;z-index:30;white-space:nowrap}
+
+@media (max-width: 980px){
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .listp{position:static}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width: 480px){
+  body{padding-inline:16px}
+  .kpis{grid-template-columns:minmax(0,1fr)}
+  .pair{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grades{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div>
+    <div class="eyebrow">__EYEBROW__</div>
+    <h1>__TITLE__</h1>
+    <div class="sub">__SUBTITLE__</div>
+  </div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="학년">
+      <button type="button" data-g="all" aria-pressed="true">전체</button>
+      <button type="button" data-g="N수" aria-pressed="false">N수</button>
+      <button type="button" data-g="고3" aria-pressed="false">고3</button>
+    </div>
+    <div class="seg" role="group" aria-label="구분" id="segc"><button type="button" data-c="기존 인원" aria-pressed="true">기존 인원</button><button type="button" data-c="6평 이후 등원" aria-pressed="false">6평 이후 등원</button><button type="button" data-c="all" aria-pressed="false">전체</button></div>
+    <label class="search"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" style="width:14px;flex:none"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" style="color:var(--muted)"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="color:var(--muted)"/></svg><input id="q" type="search" inputmode="numeric" placeholder="학번 검색" aria-label="학번 검색"></label>
+  </div>
+</header>
+
+
+
+<section class="kpis" id="kpis" aria-label="요약"></section>
+
+<div class="grid">
+  <div class="col">
+    <section class="panel" aria-labelledby="h-line">
+      <div class="ph"><h2 id="h-line">대학 라인별 도달 가능성</h2><div class="seg sm" role="group" aria-label="계열" id="segk"><button type="button" data-k="인문" aria-pressed="false">인문</button><button type="button" data-k="자연" aria-pressed="true">자연</button></div></div>
+      <div style="overflow-x:auto"><table class="mtab" id="lntab"></table></div>
+      <div class="small">라인은 그룹 안 학과들의 배치컷 중앙값입니다. 국어·수학·탐구 백분위 합 기준이며 영어는 반영하지 않았습니다. 안정은 도달 가능성 80% 이상, 가능은 40~80%, 어려움은 40% 미만입니다. 숫자를 누르면 해당 학생 명단이 보입니다. 집계표(line_stats.csv)의 예상 인원은 학생별 가능성을 모두 더한 값이라 이 표의 안정·가능 인원과 다를 수 있습니다.</div>
+    </section>
+    <section class="panel" aria-labelledby="h-grd">
+      <div class="ph"><h2 id="h-grd">과목별 예상 등급</h2><span class="hint">칸을 누르면 해당 학생 명단이 보입니다</span></div>
+      <div id="grd"></div>
+      <div class="legend" id="grdlegend"></div>
+      <div class="small">학생마다 가장 가능성 높은 등급으로 셌습니다. 탐구는 2과목 중 높은 과목 기준입니다.</div>
+    </section>
+    <section class="panel" aria-labelledby="h-min">
+      <div class="ph"><h2 id="h-min">수능 최저 점검</h2><span class="hint">숫자를 누르면 해당 학생 명단이 보입니다</span></div>
+      <div style="overflow-x:auto"><table class="mtab" id="mtab"></table></div>
+      <div class="small">국어·수학·영어·탐구(상위 1과목) 중 n개 등급 합 기준. 안정은 충족 가능성 80% 이상, 경계 40~80%, 위험 40% 미만입니다. 과탐 필수나 수학 지정 조건이 있으면 한 단계 보수적으로 보세요.</div>
+    </section>
+    <section class="panel" aria-labelledby="h-bot">
+      <div class="ph"><h2 id="h-bot">병목 과목</h2><span class="hint">막대를 누르면 해당 학생 명단이 보입니다</span></div>
+      <div id="bot"></div>
+      <div class="small" id="botnote"></div>
+    </section>
+  </div>
+  <aside class="panel listp" aria-labelledby="h-list">
+    <div class="ph"><h2 id="h-list">학생 목록</h2><button type="button" class="clear" id="clearSel" hidden>전체 보기</button></div>
+    <div class="sel-title" id="selTitle"></div>
+    <div class="tblwrap"><table class="ltab" id="ltab"></table></div>
+  </aside>
+</div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-modal="true" role="dialog" aria-labelledby="d-id"></aside>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const DATA = __DATA__;
+const S = DATA.students, M = DATA.meta, PAT = M.patterns;
+const MONTHS = [["3","3월"],["4","4월"],["5","5월"],["6평","6평"],["7","7월"],["8","8월"]];
+const state = {g:"all", c:"기존 인원", k:"자연", q:"", sel:null, sort:{k:"sat", dir:-1}};
+function Phi(z){ const t=1/(1+0.2316419*Math.abs(z)), d=0.3989423*Math.exp(-z*z/2); const p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274)))); return z>0?1-p:p; }
+const reach=(s,cut,nt=2)=> 1-Phi((cut-(s.sat.p+(nt===1?s.sat.gap:0)))/s.sat.sd);
+const LJ=p=> p>=0.8?"ok":p>=0.4?"warn":"bad";
+const LL={ok:"안정",warn:"가능",bad:"어려움"};
+const pc=p=> p<0.01?"1% 미만":p>0.99?"99% 이상":Math.round(p*100)+"%";
+const lineCut=(g,k)=>{ const L=M.lines.find(x=>x.g===g); return L?L.cut[k]:null; };
+const linesFor=k=> M.lines.filter(L=>L.cut[k]!=null).map(L=>({g:L.g,cut:L.cut[k]}));
+const cutTxt=c=> Number.isInteger(c)?String(c):c.toFixed(1);
+const $ = s => document.querySelector(s);
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs={}, parent){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e; }
+const fmt = (v,d=1) => v==null ? "–" : Number(v).toFixed(d);
+const judge = p => p==null ? null : (p>=0.8 ? "ok" : p>=0.4 ? "warn" : "bad");
+const JL = {ok:"안정", warn:"경계", bad:"위험"};
+const gcol = g => g==="고3" ? "var(--s-g)" : "var(--s-n)";
+const gchip = g => `<span class="gchip ${g==="고3"?"g":"n"}">${g}</span>`;
+
+function pool(){
+  return S.filter(s => (state.g==="all" || s.g===state.g) && (state.c==="all" || s.grp===state.c));
+}
+const has9 = s => s.n9 && s.n9.act!=null && s.n9.pred!=null;
+function inRange(s){ return has9(s) && Math.abs(s.n9.act - s.n9.pred) <= s.n9.r; }
+function median(a){ if(!a.length) return null; const b=[...a].sort((x,y)=>x-y), m=Math.floor(b.length/2); return b.length%2? b[m] : (b[m-1]+b[m])/2; }
+function anyWarn(s){ return s.min && PAT.some(p => judge(s.min[p])==="warn"); }
+
+/* 요약 수치 */
+function renderKPI(P){
+  const n=P.length, nn=P.filter(s=>s.g==="N수").length, ng=n-nn;
+  const hit=P.filter(inRange).length, n9=P.filter(has9).length;
+  const med=median(P.map(s=>s.sat.p)), medT=median(P.map(s=>s.sat.t));
+  const bc={}; P.forEach(s=>{ if(s.bott) bc[s.bott]=(bc[s.bott]||0)+1; });
+  const top=Object.entries(bc).sort((a,b)=>b[1]-a[1])[0];
+  $("#kpis").innerHTML = `
+   <div class="kpi"><div class="l">대상 인원</div><div class="v">${n}<small>명</small></div><div class="d">N수 ${nn}명 · 고3 ${ng}명</div></div>
+   <div class="kpi"><div class="l">9평 예측 범위 안</div><div class="v">${n9?Math.round(hit/n9*100):"–"}<small>%</small></div><div class="d">9평 응시 ${n9}명 중 ${hit}명 · 기대 수준 약 68%</div></div>
+   <div class="kpi"><div class="l">수능 예상 중앙값</div><div class="v">${fmt(med,0)}<small>백분위</small></div><div class="d">표준점수 약 ${fmt(medT,0)}점</div></div>
+   <div class="kpi"><div class="l">가장 흔한 병목 과목</div><div class="v">${top?top[0]:"–"}${top?`<small> ${top[1]}명</small>`:""}</div><div class="d">최저가 아슬아슬한 학생 기준</div></div>`;
+}
+
+/* 과목별 예상 등급 */
+const SUBS=["국어","수학","영어","탐구"], GCOL=["var(--g1)","var(--g2)","var(--g3)","var(--g4)","var(--g5)","var(--g6)"];
+const topGrade=(s,sub)=> s.gd ? s.gd[sub].indexOf(Math.max(...s.gd[sub]))+1 : null;
+function renderGrades(P){
+  const Q=P.filter(s=>s.gd), W=Math.max(300,Math.round($("#grd").clientWidth||640)), rowH=30, gap=12, m={l:56,r:8,t:4,b:4};
+  const H=m.t+SUBS.length*(rowH+gap)-gap+m.b, bw=W-m.l-m.r;
+  const box=$("#grd"); box.innerHTML=""; const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"과목별 예상 등급 분포"},box);
+  SUBS.forEach((sub,r)=>{ const y0=m.t+r*(rowH+gap); const cnt=[0,0,0,0,0,0]; Q.forEach(s=>{ cnt[Math.min(6,topGrade(s,sub))-1]++; });
+    const lab=el("text",{x:0,y:y0+rowH/2+4,style:"fill:var(--ink);font-weight:600;font-size:12.5px"},svg); lab.textContent=sub;
+    let x0=m.l; const n=Q.length||1;
+    cnt.forEach((c,k)=>{ if(!c) return; const w=c/n*bw; const selNow=state.sel&&state.sel.type==="grade"&&state.sel.s===sub&&state.sel.k===k+1;
+      const rc=el("rect",{x:x0,y:y0,width:Math.max(0,w),height:rowH,rx:3,fill:GCOL[k],class:"seg"+(selNow?" sel":""),tabindex:0,"aria-label":`${sub} ${k+1}등급 ${c}명`},svg);
+      rc.addEventListener("click",()=>select({type:"grade",s:sub,k:k+1})); rc.addEventListener("keydown",e=>{if(e.key==="Enter")select({type:"grade",s:sub,k:k+1})});
+      rc.addEventListener("mousemove",ev=>tip(ev,`${sub} ${k+1}등급${k===5?" 이하":""} · <b>${c}명</b> (${Math.round(c/n*100)}%)`)); rc.addEventListener("mouseleave",hideTip);
+      if(w>=26){ const tx=el("text",{x:x0+w/2,y:y0+rowH/2+4,"text-anchor":"middle",class:"seglab",style:`fill:${k<=2?"#ffffff":"#1a1d21"}`},svg); tx.textContent=c; }
+      x0+=w; }); });
+  $("#grdlegend").innerHTML=GCOL.map((c,k)=>`<span><i class="sq" style="background:${c}"></i>${k+1}등급${k===5?" 이하":""}</span>`).join("");
+}
+/* 병목 과목 */
+function renderBott(P){
+  const Q=P.filter(s=>s.bott), cnt=SUBS.map(sub=>({sub,c:Q.filter(s=>s.bott===sub).length})).sort((a,b)=>b.c-a.c);
+  const W=Math.max(300,Math.round($("#bot").clientWidth||640)), rowH=24, gap=10, m={l:56,r:44,t:2,b:2};
+  const H=m.t+cnt.length*(rowH+gap)-gap+m.b, mx=Math.max(1,...cnt.map(d=>d.c)), bw=W-m.l-m.r;
+  const box=$("#bot"); box.innerHTML=""; const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"병목 과목 분포"},box);
+  cnt.forEach((d,r)=>{ const y0=m.t+r*(rowH+gap), w=d.c/mx*bw; const selNow=state.sel&&state.sel.type==="bott"&&state.sel.s===d.sub;
+    const lab=el("text",{x:0,y:y0+rowH/2+4,style:"fill:var(--ink);font-weight:600;font-size:12.5px"},svg); lab.textContent=d.sub;
+    el("rect",{x:m.l,y:y0,width:bw,height:rowH,rx:4,fill:"var(--surface-2)"},svg);
+    if(d.c){ const rc=el("path",{d:`M${m.l},${y0} H${m.l+w-4} Q${m.l+w},${y0} ${m.l+w},${y0+4} V${y0+rowH-4} Q${m.l+w},${y0+rowH} ${m.l+w-4},${y0+rowH} H${m.l} Z`,class:"bar"+(selNow?" sel":""),tabindex:0,"aria-label":`${d.sub} ${d.c}명`},svg);
+      rc.addEventListener("click",()=>select({type:"bott",s:d.sub})); rc.addEventListener("keydown",e=>{if(e.key==="Enter")select({type:"bott",s:d.sub})});
+      rc.addEventListener("mousemove",ev=>tip(ev,`병목 ${d.sub} · <b>${d.c}명</b>`)); rc.addEventListener("mouseleave",hideTip); }
+    const v=el("text",{x:m.l+w+6,y:y0+rowH/2+4,class:"barlab"},svg); v.textContent=d.c+"명"; });
+  $("#botnote").textContent=`최저가 아슬아슬한 학생 ${Q.length}명의 성적을 바탕으로, 최저를 놓치는 경우 그 원인이 되는 일이 가장 많은 과목을 학생마다 하나씩 골라 과목별로 센 것입니다.`;
+}
+
+/* 수능 예상 분포 */
+const SHORT=["~180","180~","200~","220~","240~","260~","280~"];
+const BINS=[[0,180,"180 미만"],[180,200,"180~200"],[200,220,"200~220"],[220,240,"220~240"],[240,260,"240~260"],[260,280,"260~280"],[280,301,"280 이상"]];
+function renderSat(P){
+  const W=Math.max(300,Math.round($("#sat").clientWidth||640)), H=Math.max(190,Math.round(W*0.36)), m={l:36,r:8,t:18,b:34}, narrow=W<520;
+  const cnt=BINS.map(b=>P.filter(s=>s.sat.p>=b[0]&&s.sat.p<b[1]).length);
+  const mx=Math.max(5,...cnt), bw=(W-m.l-m.r)/BINS.length;
+  const y=v=>H-m.b-v/mx*(H-m.t-m.b);
+  const box=$("#sat"); box.innerHTML=""; const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"수능 예상 백분위 분포"},box);
+  const step=mx>40?20:mx>20?10:5;
+  for(let v=0; v<=mx; v+=step){ el("line",{x1:m.l,x2:W-m.r,y1:y(v),y2:y(v),class:"gridl"},svg); const t=el("text",{x:m.l-8,y:y(v)+4,"text-anchor":"end"},svg); t.textContent=v; }
+  BINS.forEach((b,i)=>{ const x0=m.l+i*bw+6, w=bw-12, h=H-m.b-y(cnt[i]);
+    const selNow = state.sel && state.sel.type==="bin" && state.sel.i===i;
+    const r=el("path",{d:barPath(x0,y(cnt[i]),w,h),class:"bar"+(selNow?" sel":""),tabindex:0,"aria-label":`${b[2]} ${cnt[i]}명`},svg);
+    r.addEventListener("click",()=>select({type:"bin",i})); r.addEventListener("keydown",e=>{if(e.key==="Enter")select({type:"bin",i})});
+    r.addEventListener("mousemove",ev=>tip(ev,`${b[2]} · <b>${cnt[i]}명</b>`)); r.addEventListener("mouseleave",hideTip);
+    if(cnt[i]>0){ const t=el("text",{x:x0+w/2,y:y(cnt[i])-5,"text-anchor":"middle",class:"barlab"},svg); t.textContent=cnt[i]; }
+    const t=el("text",{x:x0+w/2,y:H-m.b+16,"text-anchor":"middle"},svg); t.textContent=narrow?SHORT[i]:b[2]; });
+}
+function barPath(x,y,w,h){ const r=Math.min(4,h,w/2); if(h<=0) return ""; return `M${x},${y+h} V${y+r} Q${x},${y} ${x+r},${y} H${x+w-r} Q${x+w},${y} ${x+w},${y+r} V${y+h} Z`; }
+
+/* 대학 라인별 도달 가능성 */
+function renderLines(P){
+  const k=state.k, R=linesFor(k), n=P.length||1;
+  let h=`<thead><tr><th>라인</th><th>배치컷</th><th>안정</th><th>가능</th><th>어려움</th><th style="text-align:left">비율</th></tr></thead><tbody>`;
+  R.forEach(L=>{ const ps=P.map(s=>reach(s,L.cut)); const c={ok:0,warn:0,bad:0}; ps.forEach(p=>{ c[LJ(p)]++; });
+    const cell=j=>{ const on=state.sel&&state.sel.type==="line"&&state.sel.g===L.g&&state.sel.k===k&&state.sel.j===j; return `<td><button type="button" class="cellbtn lbtn${on?" sel":""}" data-line="${L.g}" data-j="${j}">${c[j]}<span class="u">명</span></button></td>`; };
+    h+=`<tr><td>${L.g}</td><td>${cutTxt(L.cut)}</td>${cell("ok")}${cell("warn")}${cell("bad")}<td><div class="mini" aria-hidden="true"><span style="width:${c.ok/n*100}%;background:var(--ok)"></span><span style="width:${c.warn/n*100}%;background:var(--warn)"></span><span style="width:${c.bad/n*100}%;background:var(--bad)"></span></div></td></tr>`; });
+  $("#lntab").innerHTML=h+"</tbody>";
+  document.querySelectorAll("#lntab .lbtn").forEach(b=>b.addEventListener("click",()=>select({type:"line",g:b.dataset.line,k:state.k,j:b.dataset.j})));
+}
+
+/* 최저 점검 표 */
+function renderMin(P){
+  const Q=P.filter(s=>s.min);
+  let h=`<thead><tr><th>유형</th><th>안정</th><th>경계</th><th>위험</th><th style="text-align:left">비율</th></tr></thead><tbody>`;
+  PAT.forEach((p,ix)=>{ const c={ok:0,warn:0,bad:0}; const gstart = ix>0 && PAT[ix-1][0]!==p[0]; Q.forEach(s=>c[judge(s.min[p])]++); const n=Q.length||1;
+    const cell=k=>{ const on=state.sel&&state.sel.type==="min"&&state.sel.p===p&&state.sel.k===k; return `<td><button type="button" class="cellbtn${on?" sel":""}" data-p="${p}" data-k="${k}">${c[k]}<span class="u">명</span></button></td>`; };
+    h+=`<tr${gstart?' class="gstart"':''}><td>${p}</td>${cell("ok")}${cell("warn")}${cell("bad")}<td><div class="mini" aria-hidden="true"><span style="width:${c.ok/n*100}%;background:var(--ok)"></span><span style="width:${c.warn/n*100}%;background:var(--warn)"></span><span style="width:${c.bad/n*100}%;background:var(--bad)"></span></div></td></tr>`; });
+  $("#mtab").innerHTML=h+"</tbody>";
+  document.querySelectorAll("#mtab .cellbtn").forEach(b=>b.addEventListener("click",()=>select({type:"min",p:b.dataset.p,k:b.dataset.k})));
+}
+
+/* 학생 목록 */
+function selected(P){
+  const SL={sat:"수능 예상 순",n9:"9평 순",id:"학번 순",g:"학년 순",j:"판정 순",b:"병목 순"};
+  let L=P, title=`<b>전체 ${P.length}명</b> · ${SL[state.sort.k]||""}`;
+  const s=state.sel;
+  if(s&&s.type==="bin"){ const b=BINS[s.i]; L=P.filter(x=>x.sat.p>=b[0]&&x.sat.p<b[1]); title=`수능 예상 <b>${b[2]}</b> · ${L.length}명`; }
+  if(s&&s.type==="grade"){ L=P.filter(x=>x.gd&&Math.min(6,topGrade(x,s.s))===s.k); title=`<b>${s.s} ${s.k}등급${s.k===6?" 이하":""}</b> 예상 · ${L.length}명`; }
+  if(s&&s.type==="bott"){ L=P.filter(x=>x.bott===s.s); title=`병목 과목 <b>${s.s}</b> · ${L.length}명`; }
+  if(s&&s.type==="line"){ const cut=lineCut(s.g,s.k); L=P.filter(x=>x.sat&&LJ(reach(x,cut))===s.j); title=`<b>${s.g}</b> 라인 (${s.k} ${cutTxt(cut)}) · <span class="st ${s.j}">${LL[s.j]}</span> · ${L.length}명`; }
+  if(s&&s.type==="min"){ L=P.filter(x=>x.min&&judge(x.min[s.p])===s.k); title=`<b>${s.p}</b> · <span class="st ${s.k}">${JL[s.k]}</span> · ${L.length}명`; }
+  if(state.q){ L=L.filter(x=>String(x.id).includes(state.q)); title+=` · 검색 “${state.q}”`; }
+  return {L,title};
+}
+function renderList(P){
+  const {L,title}=selected(P); $("#selTitle").innerHTML=title; $("#clearSel").hidden=!state.sel;
+  const p = state.sel&&state.sel.type==="min" ? state.sel.p : "3합6";
+  const ls = state.sel&&state.sel.type==="line" ? state.sel : null, lc = ls ? lineCut(ls.g,ls.k) : null;
+  const key={id:x=>x.id, g:x=>x.g, n9:x=>(x.n9&&x.n9.act!=null)?x.n9.act:null, sat:x=>x.sat?x.sat.p:null, j:x=> ls ? (x.sat?reach(x,lc):null) : (x.min?x.min[p]:null), b:x=>x.bott||null};
+  const k=state.sort.k, d=state.sort.dir;
+  const R=[...L].sort((a,b)=>{ const va=key[k](a), vb=key[k](b); if(va==null&&vb==null) return 0; if(va==null) return 1; if(vb==null) return -1; return (va>vb?1:va<vb?-1:0)*d; });
+  const arrow=c=> state.sort.k===c ? (state.sort.dir>0?" ▲":" ▼") : "";
+  let h=`<thead><tr><th data-k="id">학번${arrow("id")}</th><th data-k="g">학년${arrow("g")}</th><th data-k="n9">9평${arrow("n9")}</th><th data-k="sat">수능 예상${arrow("sat")}</th><th data-k="j">${ls?"도달 가능성":p}${arrow("j")}</th><th data-k="b">병목${arrow("b")}</th></tr></thead><tbody>`;
+  if(!R.length) h+=`<tr><td colspan="6"><div class="empty">해당하는 학생이 없습니다</div></td></tr>`;
+  R.forEach(x=>{ let c4; if(ls){ if(x.sat){ const r=reach(x,lc); c4=`<span class="st ${LJ(r)}">${pc(r)}</span>`; } else c4="–"; } else { const j=x.min?judge(x.min[p]):null; c4=j?`<span class="st ${j}">${JL[j]}</span>`:"–"; }
+    h+=`<tr data-id="${x.id}"><td>${x.id}</td><td>${gchip(x.g)}${x.grp==="6평 이후 등원"?'<span class="tag7">6평 이후</span>':x.grp==="9평만"?'<span class="tag7">9평만</span>':""}</td><td>${x.n9&&x.n9.act!=null?fmt(x.n9.act,1).replace(/\.0$/,""):"–"}</td><td>${x.sat?fmt(x.sat.p,0):"–"}</td><td>${c4}</td><td>${x.bott||"–"}</td></tr>`; });
+  $("#ltab").innerHTML=h+"</tbody>";
+  $("#ltab").querySelectorAll("th").forEach(th=>th.addEventListener("click",()=>{ const c=th.dataset.k; state.sort = state.sort.k===c ? {k:c,dir:-state.sort.dir} : {k:c,dir:(c==="id"||c==="g"||c==="b")?1:-1}; renderList(pool()); }));
+  $("#ltab").querySelectorAll("tbody tr[data-id]").forEach(tr=>tr.addEventListener("click",()=>openCard(S.find(s=>s.id==tr.dataset.id))));
+}
+
+/* 학생 카드 */
+function openCard(s){
+  hideTip();
+  const pts=MONTHS.map(([k,l])=>({l, v:s.mon[k]})).concat([{l:"9평", v:s.n9.act, act:true}]);
+  const W=460,H=190,m={l:36,r:14,t:14,b:28}, R9=s.n9.r, hasP=s.n9.pred!=null;
+  const vals=pts.map(p=>p.v).filter(v=>v!=null).concat(hasP?[s.n9.pred-R9, s.n9.pred+R9]:[]);
+  let lo=Math.max(0,Math.floor((Math.min(...vals)-10)/20)*20), hi=Math.min(300,Math.ceil((Math.max(...vals)+10)/20)*20); if(hi-lo<60){ lo=Math.max(0,hi-60); }
+  const x=i=>m.l+i*(W-m.l-m.r)/(pts.length-1), y=v=>H-m.b-(v-lo)/(hi-lo)*(H-m.t-m.b);
+  let g=""; for(let v=lo; v<=hi; v+=20){ g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}" class="gridl"/><text x="${m.l-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`; }
+  const i9=pts.length-1;
+  if(hasP){ g+=`<rect x="${x(i9)-9}" y="${y(Math.min(hi,s.n9.pred+R9))}" width="18" height="${y(Math.max(lo,s.n9.pred-R9))-y(Math.min(hi,s.n9.pred+R9))}" rx="4" fill="var(--band)"/>`;
+    g+=`<line x1="${x(i9)-9}" x2="${x(i9)+9}" y1="${y(s.n9.pred)}" y2="${y(s.n9.pred)}" stroke="var(--accent)" stroke-width="2"/>`; }
+  const seg=pts.map((p,i)=>p.v==null?null:[x(i),y(p.v)]); let path="", pen=false;
+  seg.forEach(q=>{ if(!q){pen=false;return;} path+=(pen?"L":"M")+q[0]+","+q[1]+" "; pen=true; });
+  g+=`<path d="${path}" fill="none" stroke="${gcol(s.g)}" stroke-width="2"/>`;
+  pts.forEach((p,i)=>{ g+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${p.l}</text>`; if(p.v!=null) g+=`<circle cx="${x(i)}" cy="${y(p.v)}" r="${p.act?5:4}" fill="${gcol(s.g)}" stroke="var(--surface)" stroke-width="1.5"/>`; });
+  const groups=[...new Set(PAT.map(p=>p[0]))];
+  const minHtml = s.min ? groups.map(n=>`<div class="chips">${PAT.filter(p=>p[0]===n).map(p=>{ const j=judge(s.min[p]); return `<div class="pchip"><b>${p}</b><span class="st ${j}">${JL[j]}</span></div>`; }).join("")}</div>`).join("") : `<div class="small">최저 판정을 낼 수 없는 학생입니다 (응시 과목 부족).</div>`;
+  const eg = s.gd ? ["국어","수학","영어","탐구"].map(k=>{ const p=s.gd[k], top=p.indexOf(Math.max(...p));
+      const cols=p.map((x,i)=>{ const pc=Math.round(x*100); return `<div class="gcol"><div class="track"><div class="fill${i===top?" top":""}" style="height:${Math.max(2,x*100)}%"></div></div><div class="pc">${pc>=1?pc+"%":"·"}</div><div class="gk">${i+1}</div></div>`; }).join("");
+      return `<div class="grow"><div class="gname">${k}${k==="탐구"?"<small> 상위1</small>":""}</div><div class="gbars">${cols}</div></div>`; }).join("") : "";
+  const diff=has9(s)?s.n9.act-s.n9.pred:null, dtxt = diff==null?"":(Math.abs(diff)<=s.n9.r ? "예측 범위 안" : diff>0 ? "예측보다 잘 봄" : "예측보다 못 봄");
+  $("#drawer").innerHTML=`
+   <div class="dh"><div><div class="id" id="d-id">${s.id}</div><div class="meta">${gchip(s.g)}<span>${s.grp}</span>${s.chg?`<span>· 선택과목 변경: ${s.chg}</span>`:""}</div></div><button type="button" class="x" id="closeCard" aria-label="닫기">×</button></div>
+   <div class="sec"><h3>성적 흐름 (백분위 합, 300점)</h3><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 성적 흐름">${g}</svg>
+     <div class="small">${hasP?"9평 위치의 음영은 9평 전에 고정해 둔 예측 범위, 가로 굵은 선은 예측값입니다.":""}${s.n9.act==null?" 9평 성적이 없습니다.":""}</div></div>
+   ${has9(s)?`<div class="sec"><h3>9평 예측과 실제</h3><div class="pair">
+     <div class="cell"><div class="l">예측</div><div class="v">${fmt(s.n9.pred)}</div></div>
+     <div class="cell"><div class="l">실제</div><div class="v">${fmt(s.n9.act)}</div></div>
+     <div class="cell"><div class="l">차이</div><div class="v">${diff>0?"+":""}${fmt(diff)}<small> ${dtxt}</small></div></div></div></div>`:""}
+   ${s.sat?`<div class="sec"><h3>수능 예상</h3><div class="pair">
+     <div class="cell"><div class="l">백분위</div><div class="v">${fmt(s.sat.p,0)}</div></div>
+     <div class="cell"><div class="l">예상 범위</div><div class="v">${fmt(Math.max(0,s.sat.p-s.sat.sd),0)}~${fmt(Math.min(300,s.sat.p+s.sat.sd),0)}</div></div>
+     <div class="cell"><div class="l">표준점수</div><div class="v">${fmt(s.sat.t,0)}<small> ±${fmt(s.sat.td,0)}</small></div></div></div>
+     <div class="small">예상 범위는 점수대별 오차를 반영했습니다. 3명 중 2명 정도가 이 범위 안에 듭니다.</div></div>
+   <div class="sec"><h3>대학 라인 도달 가능성</h3>
+     <table class="lgt"><thead><tr><th>라인</th><th>인문 (컷 · 가능성)</th><th>자연 (컷 · 가능성)</th></tr></thead><tbody>${M.lines.map(L=>{ const f=k=>{ const c=L.cut[k]; if(c==null) return "<td>–</td>"; const r=reach(s,c); return `<td><span class="c">${cutTxt(c)}</span><span class="st ${LJ(r)}">${pc(r)}</span></td>`; }; return `<tr><td>${L.g}</td>${f("인문")}${f("자연")}</tr>`; }).join("")}</tbody></table>
+     <div class="small">라인은 그룹 안 학과 배치컷의 중앙값입니다. 국어·수학·탐구 백분위 합 기준이며 영어는 반영하지 않았습니다.</div>
+     <label class="usearch"><span aria-hidden="true" style="color:var(--muted)">⌕</span><input id="uq" type="search" placeholder="대학·학과 검색 (예: 대학명 학과명)" aria-label="대학·학과 검색"></label>
+     <div id="ures"></div></div>`:`<div class="sec"><div class="small">3~8월 모의고사 기록이 없어 수능 예상, 대학 라인, 최저 판정은 계산하지 않았습니다. 9평 성적과 등급만 보여줍니다.</div></div>`}
+   ${s.gr?`<div class="sec"><h3>과목별 등급 흐름</h3><div style="overflow-x:auto"><table class="gtab"><thead><tr><th></th>${MONTHS.concat([["9평","9평"]]).map(m=>`<th>${m[1]}</th>`).join("")}<th title="가장 좋은 등급과 가장 낮은 등급의 차이">폭</th></tr></thead><tbody>${["국어","수학","영어","탐구"].map(k=>{ const v=s.gr[k]; const nn=v.filter(x=>x!=null); const w=nn.length>1?Math.max(...nn)-Math.min(...nn):null; return `<tr><td>${k}${k==="탐구"?'<small style="color:var(--muted);font-weight:500"> 상위1</small>':""}</td>${v.map(x=>`<td>${x==null?'<span class="na">·</span>':x}</td>`).join("")}<td class="${w!=null&&w>=2?"wide":""}">${w==null?"–":w}</td></tr>`; }).join("")}</tbody></table></div></div>`:""}
+   ${eg?`<div class="sec"><h3>과목별 예상 등급</h3><div class="gwrap">${eg}</div><div class="small">막대 아래 숫자는 등급, 위 숫자는 그 등급이 나올 가능성입니다. 진한 막대가 가장 가능성 높은 등급입니다.</div></div>`:""}
+   ${s.sat?`<div class="sec"><h3>최저 유형별 판정</h3><div class="pgroups">${minHtml}</div>
+     ${s.bott?`<div class="bott">병목 과목: <b>${s.bott}</b> · 최저를 놓친다면 이 과목 때문일 가능성이 가장 큽니다.</div>`:""}</div>`:""}`;
+  $("#drawer").hidden=false; $("#scrim").hidden=false; $("#closeCard").focus();
+  if($("#uq")) $("#uq").addEventListener("input",e=>renderUnits(s,e.target.value));
+  $("#closeCard").addEventListener("click",closeCard);
+}
+function renderUnits(s,q){
+  const box=$("#ures"), toks=q.trim().split(/\s+/).filter(Boolean);
+  if(!toks.length){ box.innerHTML=""; return; }
+  const R=M.units.filter(u=>{ const hay=u[0]+" "+u[1]+" "+u[8]; return toks.every(t=>hay.includes(t)); }).sort((a,b)=>b[6]-a[6]);
+  if(!R.length){ box.innerHTML=`<div class="empty">검색 결과가 없습니다</div>`; return; }
+  let h=`<table class="utab"><thead><tr><th>대학 · 모집단위</th><th>군</th><th>배치컷</th><th title="배치표 기준 영어 등급. 계산에는 반영하지 않았습니다">영어</th><th>가능성</th></tr></thead><tbody>`;
+  R.slice(0,40).forEach(u=>{ const r=reach(s,u[6],u[5]); const tags=(u[4].includes("과")?'<span class="tagx">과탐</span>':"")+(u[5]===1?'<span class="tagx">탐구 1과목</span>':"");
+    h+=`<tr><td><div class="un">${u[0]} ${u[1]}</div><div class="us">${u[3]} · ${u[8]}${tags}</div></td><td>${u[2]}</td><td>${u[6]}</td><td>${u[7]}등급</td><td><span class="st ${LJ(r)}">${pc(r)}</span></td></tr>`; });
+  box.innerHTML=h+"</tbody></table>"+(R.length>40?`<div class="small">${R.length}개 중 배치컷이 높은 40개만 보입니다. 검색어를 더 넣어 좁혀 주세요.</div>`:"")+`<div class="small">영어는 배치표 기준 등급을 참고로만 보여줍니다. 국어·수학·탐구를 모두 반영하는 학과만 검색됩니다.</div>`;
+}
+function closeCard(){ $("#drawer").hidden=true; $("#scrim").hidden=true; }
+$("#scrim").addEventListener("click",closeCard);
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeCard(); });
+
+/* 툴팁 */
+function tip(ev,html){ const t=$("#tip"); t.innerHTML=html; t.hidden=false; const w=t.offsetWidth; let X=ev.clientX+12; if(X+w>innerWidth-8) X=ev.clientX-w-12; t.style.left=X+"px"; t.style.top=(ev.clientY+12)+"px"; }
+function hideTip(){ $("#tip").hidden=true; }
+
+/* 선택과 필터 */
+function select(sel){ const same=state.sel&&JSON.stringify(state.sel)===JSON.stringify(sel); state.sel=same?null:sel; if(sel.type==="min"&&!same) state.sort={k:"sat",dir:-1}; if(sel.type==="line"&&!same) state.sort={k:"j",dir:-1}; render(); }
+$("#clearSel").addEventListener("click",()=>{ state.sel=null; render(); });
+document.querySelectorAll(".seg button[data-g]").forEach(b=>b.addEventListener("click",()=>{ state.g=b.dataset.g; document.querySelectorAll(".seg button[data-g]").forEach(x=>x.setAttribute("aria-pressed",x===b)); render(); }));
+document.querySelectorAll("#segc button").forEach(b=>b.addEventListener("click",()=>{ state.c=b.dataset.c; document.querySelectorAll("#segc button").forEach(x=>x.setAttribute("aria-pressed",x===b)); state.sel=null; render(); }));
+$("#q").addEventListener("input",e=>{ state.q=e.target.value.trim(); renderList(pool()); });
+document.querySelectorAll("#segk button").forEach(b=>b.addEventListener("click",()=>{ state.k=b.dataset.k; document.querySelectorAll("#segk button").forEach(x=>x.setAttribute("aria-pressed",x===b)); if(state.sel&&state.sel.type==="line") state.sel=null; render(); }));
+function render(){ const P=pool(), Pm=P.filter(s=>s.sat); renderKPI(Pm); renderLines(Pm); renderGrades(Pm); renderMin(Pm); renderBott(Pm); renderList(P); }
+render();
+let rz; addEventListener("resize",()=>{ clearTimeout(rz); rz=setTimeout(()=>{ const P=pool().filter(s=>s.sat); renderGrades(P); renderBott(P); },150); });
+</script>
+</body>
+</html>

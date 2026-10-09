@@ -1,0 +1,24 @@
+# 결과물
+outputs/
+
+# 실제 데이터는 커밋하지 않음 (가상 데이터만 허용)
+data/*
+!data/README.md
+!data/sample/
+*.xlsx
+*.xls
+*.xlsm
+config/*.private.json
+config/real*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# 기타
+.DS_Store
+fonts/

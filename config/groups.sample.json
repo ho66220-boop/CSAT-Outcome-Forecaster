@@ -1,0 +1,16 @@
+{
+  "full_types": ["국수영탐", "국수탐", "국수영과", "국수과"],
+  "exclude_admission_regex": "실기|지역|교과|PTU|농어촌|특성화",
+  "min_units": 3,
+  "groups": [
+    {"name": "메디컬", "unit_regex": "^(의예|의학과|치의|한의|약학|수의)"},
+    {"name": "최상위권", "universities": ["가온대", "나래대", "다솜대"]},
+    {"name": "상위권", "universities": ["라온대", "마루대", "바름대"]},
+    {"name": "중상위권", "universities": ["새봄대", "아라대", "온누리대", "이음대"]},
+    {"name": "중위권", "universities": ["자람대", "차오름대", "큰솔대"]},
+    {"name": "중하위권", "universities": ["타래대", "파랑대", "하람대", "한울대"]},
+    {"name": "거점국립 A", "universities": ["한빛국립대"]},
+    {"name": "거점국립 B", "universities": ["누리국립대"]},
+    {"name": "교대", "unit_contains": "초등교육"}
+  ]
+}

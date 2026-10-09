@@ -1,0 +1,21 @@
+[project]
+name = "suneung-forecast"
+version = "1.0.0"
+description = "모의고사 성적으로 수능 성적, 대학 라인 도달 가능성, 수능 최저 충족 가능성을 예측하는 파이프라인"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "pandas>=2.0", "scipy>=1.10", "openpyxl>=3.1"]
+
+[project.optional-dependencies]
+fonts = ["fonttools[woff]>=4.40"]
+dev = ["pytest>=7"]
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

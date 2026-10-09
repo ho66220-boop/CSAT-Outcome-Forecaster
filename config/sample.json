@@ -1,0 +1,21 @@
+{
+  "data": {
+    "prev_scores": "data/sample/scores_prev.csv",
+    "curr_scores": "data/sample/scores_curr.csv",
+    "sept_scores": ["data/sample/sept_v1.csv", "data/sample/sept_v2.csv"],
+    "roster": "data/sample/roster.csv",
+    "placement": "data/sample/placement.csv",
+    "fixes": "data/sample/fixes.csv"
+  },
+  "groups": "config/groups.sample.json",
+  "ref_date": "2026-10-09",
+  "sigma": {"floor": 12, "cap": 40},
+  "simulation": {"n": 6000, "backtest_n": 3000, "seed": 21},
+  "judge": {"ok": 0.8, "warn": 0.4},
+  "dashboard": {
+    "eyebrow": "가상 데이터 예시",
+    "title": "수능 예측 대시보드",
+    "subtitle": "9월 모의평가 반영 · 기준일 2026-10-09",
+    "font_dir": null
+  }
+}
