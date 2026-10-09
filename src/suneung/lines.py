@@ -59,11 +59,19 @@ def line_cuts(B, cfg):
     return lines
 
 
-def line_stats(mu, sd, lines, n_draw=4000, seed=21, cap=300):
-    """집단 집계: 예상 인원(확률 합), 90% 범위(시뮬레이션), 안정(≥80%)·가능(40~80%) 인원."""
+def line_stats(mu, sd, lines, n_draw=4000, seed=21, cap=300, common_sd=0.0):
+    """집단 집계: 예상 인원(확률 합), 90% 범위(시뮬레이션), 안정(≥80%)·가능(40~80%) 인원.
+
+    common_sd 는 그해 수능 난이도처럼 모든 학생을 같은 방향으로 움직이는 공통 이동의 표준편차입니다.
+    학생별 전체 σ는 그대로 두고 그중 일부를 공통 이동으로 나누므로, 학생별 확률과 예상 인원은
+    바뀌지 않고 90% 범위만 넓어집니다. 0이면 학생 오차가 서로 독립이라고 가정합니다.
+    """
     mu, sd = np.asarray(mu, float), np.asarray(sd, float)
     rng = np.random.default_rng(seed)
-    draws = np.minimum(cap, mu[None, :] + sd[None, :] * rng.standard_normal((n_draw, len(mu))))
+    c = np.minimum(float(common_sd), sd)
+    ind = np.sqrt(sd ** 2 - c ** 2)
+    shock = rng.standard_normal((n_draw, 1))
+    draws = np.minimum(cap, mu[None, :] + c[None, :] * shock + ind[None, :] * rng.standard_normal((n_draw, len(mu))))
     rows = []
     for L in lines:
         for k in TRACKS:

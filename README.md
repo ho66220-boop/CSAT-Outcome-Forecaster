@@ -109,6 +109,7 @@ flowchart TD
 - 7, 8월 사설 실모 점수를 그대로 쓰면 9평을 **평균 8.5점 높게** 예측했습니다. 7, 8월 사설 실모 백분위가 부풀려져 있다는 가설이 확인됐습니다.
 - 학생별 3\~6월 평균을 기준점으로 7, 8월을 연도 간 보정하면 치우침은 사라졌지만 3\~6월만 쓴 것보다 나아지지 않았습니다(RMSE 18.5 대 18.2). 그래서 기존 인원 모델에서는 7, 8월을 뺐습니다.
 - 최종 채점(n=90): 예측 범위 안 73%, RMSE 17.7, 치우침 −0.3점입니다. 대시보드의 "9평 예측 범위 안" 수치도 이 사전 고정 예측(기존 인원은 보정한 7, 8월 포함)으로 계산합니다.
+- 수능 예측도 같은 방식으로 고정했습니다. 학생 정보가 담긴 예측 파일 대신 파일의 SHA-256 해시만 [`preregistration/`](preregistration/)에 커밋해 두고 수능 성적 발표 후 채점합니다.
 
 ### 3-3. 오차 모델: 점수대별 σ
 
@@ -130,7 +131,7 @@ flowchart TD
 - 배치기준점수표에서 국어, 수학, 탐구를 모두 반영하는 모집단위만 골라 11개 대학 그룹의 계열별 배치컷 중앙값을 라인으로 정의했습니다. 실기, 지역인재 등 제한 전형은 라인 계산에서 뺐습니다.
 - 학생별 도달 확률은 `P = 1 − Φ((컷 − 예측) / σ(예측))`로 계산했습니다.
 - 탐구 1과목만 반영하는 학과는 학생의 두 탐구 백분위 차이의 절반을 더해 계산합니다. 작년 자료로 점검하면 이 방식의 오차(RMSE 19.5)는 기본 지표의 오차(19.9)와 비슷했습니다.
-- 집단 예상 인원은 학생별 확률의 합으로 내고 90% 범위는 시뮬레이션으로 구했습니다.
+- 집단 예상 인원은 학생별 확률의 합으로 내고 90% 범위는 시뮬레이션으로 구했습니다. 시뮬레이션은 학생 오차가 서로 독립이라고 가정합니다(6장 참고).
 
 ### 3-5. 과목별 등급과 수능 최저
 
@@ -180,6 +181,7 @@ flowchart TD
 - 대학 라인 계산에는 영어가 빠져 있습니다.
 - 전년도 점검에서 최상위 라인(SKY 등) 도달 인원을 실제보다 적게 추정하는 경향이 있었습니다.
 - 과목별 등급 분포의 탐구 상위 1과목 계산은 두 과목 독립 가정을 씁니다.
+- 집단 90% 범위는 실제보다 좁을 수 있습니다. 그해 수능 난이도처럼 모든 학생을 같은 방향으로 움직이는 요인이 있는데 시뮬레이션은 학생 오차를 서로 독립으로 뽑기 때문입니다. 1개 연도 자료로는 이 공통 이동의 크기를 추정할 수 없어 설정값(`sigma.common_sd`)으로 넣을 수 있게만 했습니다. 학생별 확률과 예상 인원은 그대로 두고 범위만 넓어지며 가상 데이터에서는 공통 이동 σ를 5점만 넣어도 범위가 2배 안팎으로 넓어졌습니다(`line_range_sensitivity.csv`).
 
 ## 7. 산출물
 
@@ -195,15 +197,17 @@ PDF 보고서와 승반 판정 엑셀은 내부 양식에 맞춘 문서라 저�
 
 ```
 config/
-  sample.json             가상 데이터 실행 설정 (경로, 기준일, σ floor와 cap, 판정 구간, 대시보드 제목)
+  sample.json             가상 데이터 실행 설정 (경로, 기준일, σ floor와 cap, 공통 이동 σ, 판정 구간, 대시보드 제목)
   groups.sample.json      가상 대학 그룹
   groups.kr.json          실제 분석에 쓴 11개 대학 그룹 정의
 data/
   README.md               입력 파일 형식
   sample/                 가상 데이터 (scripts/make_sample_data.py 로 생성)
+preregistration/          수능 전에 고정한 예측 파일의 SHA-256 해시
 scripts/
   make_sample_data.py     가상 데이터 생성
   run_pipeline.py         전체 실행
+  freeze_predictions.py   예측 파일 해시 기록과 대조
 src/suneung/
   schema.py               열 이름, 시험 코드, 입력 조합 같은 공통 상수
   io.py                   파일 읽기, 시험명과 과목명 표준화
@@ -228,7 +232,7 @@ tests/                    단위 테스트, 가상 데이터 전체 실행 테�
 | 3. 지표, 대상 정의 | `metrics` | |
 | 4. 총점 모델 | `total_model` | `model_comparison.csv`, `sept_check.csv` |
 | 5. 오차 모델 | `error_model` | `sigma_floor_eval.csv`, `sigma_calibration.csv`, `sigma_params.json` |
-| 6\~7. 수능 예상, 대학 라인 | `total_model`, `lines` | `students.csv`, `line_cuts.csv`, `line_stats.csv`, `line_backcheck.csv` |
+| 6\~7. 수능 예상, 대학 라인 | `total_model`, `lines` | `students.csv`, `line_cuts.csv`, `line_stats.csv`, `line_range_sensitivity.csv`, `line_backcheck.csv` |
 | 8. 과목 모델, 수능 최저 | `subject_model` | `minimum_backtest.csv`, `minimum_table.csv`, `bottleneck_compare.csv` |
 | 9. 대시보드 | `dashboard` | `dashboard.html`, `dashboard_data.json` |
 | 10. 요약 | `pipeline` | `summary.md` |

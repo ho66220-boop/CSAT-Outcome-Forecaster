@@ -38,3 +38,12 @@ def test_line_stats_counts():
     st = lines.line_stats([280, 250, 220], [12, 12, 12], L, n_draw=2000)
     r = st.iloc[0]
     assert r["안정"] == 1 and r["가능"] == 1 and 1.4 < r["예상_인원"] < 1.6
+
+
+def test_common_shift_widens_range_only():
+    L = [{"g": "X", "cut": {"인문": 250.0, "자연": None}}]
+    mu, sd = list(range(200, 300, 2)), [15.0] * 50
+    a = lines.line_stats(mu, sd, L, n_draw=4000, common_sd=0).iloc[0]
+    b = lines.line_stats(mu, sd, L, n_draw=4000, common_sd=10).iloc[0]
+    assert a["예상_인원"] == b["예상_인원"]              # 학생별 확률은 그대로
+    assert (b["상한_95"] - b["하한_5"]) > 1.5 * (a["상한_95"] - a["하한_5"])

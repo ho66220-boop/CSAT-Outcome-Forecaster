@@ -45,7 +45,7 @@ def _md_table(df, floatfmt=1):
     def f(v):
         if isinstance(v, float):
             return "" if np.isnan(v) else f"{v:.{floatfmt}f}"
-        return str(v)
+        return str(v).replace("~", "\\~")      # GitHub 마크다운에서 물결표 두 개가 취소선이 되지 않게
     head = "| " + " | ".join(map(str, df.columns)) + " |"
     sep = "|" + "---|" * len(df.columns)
     body = ["| " + " | ".join(f(v) for v in r) + " |" for r in df.itertuples(index=False)]
@@ -93,6 +93,7 @@ def run(config, out_dir="outputs", n_sim=None, log=print):
     n_sim = n_sim or sim.get("n", 6000)
     n_bt = min(n_sim, sim.get("backtest_n", 3000))
     floor, cap = cfg.get("sigma", {}).get("floor", 12.0), cfg.get("sigma", {}).get("cap", 40.0)
+    common = cfg.get("sigma", {}).get("common_sd", 0.0)
     ok, warn = cfg.get("judge", {}).get("ok", 0.8), cfg.get("judge", {}).get("warn", 0.4)
     ref = pd.Timestamp(cfg["ref_date"])
 
@@ -179,7 +180,7 @@ def run(config, out_dir="outputs", n_sim=None, log=print):
     for grp in (GROUP_EXISTING, GROUP_LATE):
         s = S[S["구분"] == grp]
         if len(s):
-            st.append(lines.line_stats(s["sat_p"], s["sd"], L, seed=sim.get("seed", 21)).assign(구분=grp))
+            st.append(lines.line_stats(s["sat_p"], s["sd"], L, seed=sim.get("seed", 21), common_sd=common).assign(구분=grp))
     st = pd.concat(st, ignore_index=True) if st else pd.DataFrame()
     if len(st):
         st = st.merge(lines.last_year_shares(Wp[SAT], L)[["라인", "계열", "전년도_비율"]], on=["라인", "계열"], how="left")
@@ -187,6 +188,18 @@ def run(config, out_dir="outputs", n_sim=None, log=print):
         log("    배치컷을 정할 수 있는 라인이 없습니다. 그룹 설정의 min_units 와 대학명을 확인하세요.")
         st = pd.DataFrame(columns=["라인", "계열", "배치컷", "n", "예상_인원", "하한_5", "상한_95", "안정", "가능", "구분", "전년도_비율"])
     st.to_csv(out / "line_stats.csv", index=False)
+    ex = S[S["구분"] == GROUP_EXISTING]
+    sens = []
+    for c in (0.0, 5.0, 10.0):
+        t = lines.line_stats(ex["sat_p"], ex["sd"], L, seed=sim.get("seed", 21), common_sd=c) if len(ex) else pd.DataFrame()
+        if len(t):
+            t = t[t["계열"] == "자연"]
+            sens.append(t.assign(공통_σ=c, 범위=t["하한_5"].map("{:.0f}".format) + "~" + t["상한_95"].map("{:.0f}".format)))
+    sens = pd.concat(sens).pivot_table(index="라인", columns="공통_σ", values="범위", aggfunc="first", sort=False) if sens else pd.DataFrame()
+    if len(sens):
+        sens.columns = [f"공통 σ {c:g}" for c in sens.columns]
+        sens = sens.reindex([x["g"] for x in L if x["g"] in sens.index]).reset_index()
+        sens.to_csv(out / "line_range_sensitivity.csv", index=False)
     bc = lines.backcheck(M["M1"].pred_loo, M["M1"].y, error_model.sigma(TH["M1"], M["M1"].pred_loo, floor, cap), L)
     bc.to_csv(out / "line_backcheck.csv", index=False)
     log(f"[7] 대학 라인 {len(L)}개, 배치표 {len(B)}개 모집단위")
@@ -196,7 +209,7 @@ def run(config, out_dir="outputs", n_sim=None, log=print):
     D2 = subject_model.features(prev, M2_EXAMS, set(prev.loc[prev["시험명"].isin(M2_EXAMS), "학번"]), target=SAT)
     D1, D2 = D1[D1["국_g"].notna()], D2[D2["국_g"].notna()]
     T1, T2 = subject_model.train(D1), subject_model.train(D2)
-    bt = subject_model.backtest(D1, T1[1], T1[2], n_sim=n_bt, ok=ok, warn=warn)
+    bt = subject_model.backtest(D1, n_sim=n_bt, ok=ok, warn=warn)
     bts = bt.groupby("판정").agg(n=("실제", "size"), 평균_예측=("p", "mean"), 실제_충족=("실제", "mean")).reindex(["안정", "경계", "위험"]).reset_index()
     bts.to_csv(out / "minimum_backtest.csv", index=False)
     adj = subject_model.private_adjust(prev, curr)
@@ -270,6 +283,9 @@ def run(config, out_dir="outputs", n_sim=None, log=print):
         "## 오차 모델 비교 (LOO)", "", _md_table(fl, 4), "",
         "## 점수대별 σ", "", _md_table(pd.DataFrame([{"모델": k, **v["sigma_at"]} for k, v in sig_info.items()])), "",
         "## 대학 라인별 전망", "", _md_table(st[st["구분"] == GROUP_EXISTING].drop(columns=["구분"]), 2), "",
+        f"## 공통 이동을 넣었을 때 90% 범위 ({GROUP_EXISTING}, 자연 컷)", "",
+        "학생 오차가 서로 독립이면(공통 σ 0) 범위가 좁게 나옵니다. 공통 σ는 1개 연도 자료로 추정할 수 없어 예시 값입니다.", "",
+        _md_table(sens) if len(sens) else "", "",
         "## 전년도 재현 점검 (자연 컷)", "", _md_table(bc), "",
         "## 수능 최저 백테스트 (전년도, LOO)", "", _md_table(bts, 3), "",
         f"## 수능 최저 판정 ({GROUP_EXISTING})", "", _md_table(pd.DataFrame(mt)), "",

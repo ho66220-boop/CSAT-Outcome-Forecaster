@@ -86,8 +86,8 @@ def features(df, exams, ids=None, target=None, adj=None):
     return pd.DataFrame(rows).set_index("학번") if rows else pd.DataFrame()
 
 
-def train(D):
-    """과목별 계수, LOO 잔차 표준편차, 잔차 상관행렬."""
+def loo_residuals(D):
+    """과목별 계수(전체 학습)와 LOO 잔차(학생을 빼고 맞춘 직선으로 그 학생을 예측한 오차)."""
     coef, res = {}, {}
     for s in SUBJ:
         ok = D[[s + "_x", s + "_y"]].dropna()
@@ -97,8 +97,19 @@ def train(D):
             t = ok.drop(i)
             p[i] = np.polyval(np.polyfit(t[s + "_x"], t[s + "_y"], 1), ok.at[i, s + "_x"])
         res[s] = D[s + "_y"] - p
+    return coef, pd.DataFrame(res)
+
+
+def spread(res):
+    """잔차표에서 과목별 표준편차와 상관행렬."""
     sig = {s: float(np.sqrt(np.nanmean(res[s] ** 2))) for s in SUBJ}
-    R = pd.DataFrame(res).corr().values
+    return sig, res[SUBJ].corr().values
+
+
+def train(D):
+    """과목별 계수, LOO 잔차 표준편차, 잔차 상관행렬."""
+    coef, res = loo_residuals(D)
+    sig, R = spread(res)
     return coef, sig, R
 
 
@@ -196,8 +207,10 @@ def student_result(sid, row, coef, sig, R, n_sim=6000, ok=0.8, warn=0.4, compare
     return res
 
 
-def backtest(D, sig, R, n_sim=3000, ok=0.8, warn=0.4):
-    """전년도 LOO 백테스트: 학생을 빼고 계수를 다시 맞춘 뒤, 판정 구간별 실제 충족 비율을 봅니다."""
+def backtest(D, n_sim=3000, ok=0.8, warn=0.4):
+    """전년도 LOO 백테스트. 학생마다 그 학생을 빼고 계수를 다시 맞추고, σ와 상관행렬도
+    그 학생의 잔차를 뺀 나머지로 다시 계산한 뒤, 판정 구간별 실제 충족 비율을 봅니다."""
+    _, res = loo_residuals(D)
     recs = []
     for sid, r in D.iterrows():
         if any(pd.isna(r[s + "_x"]) or pd.isna(r[s + "_y"]) or pd.isna(r[s + "_g"]) for s in SUBJ):
@@ -206,6 +219,7 @@ def backtest(D, sig, R, n_sim=3000, ok=0.8, warn=0.4):
         for s in SUBJ:
             okd = D[[s + "_x", s + "_y"]].dropna().drop(sid, errors="ignore")
             mu[s] = np.polyval(np.polyfit(okd[s + "_x"], okd[s + "_y"], 1), r[s + "_x"])
+        sig, R = spread(res.drop(sid))
         P = pattern_probs(draws(mu, sig, R, n_sim, int(sid) % 9973))
         act = {"국": np.array(r["국_g"]), "수": np.array(r["수_g"]), "영": np.array(r["영_g"]),
                "탐": np.array(min(r["탐1_g"], r["탐2_g"]))}

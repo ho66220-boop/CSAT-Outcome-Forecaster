@@ -9,7 +9,7 @@
   },
   "groups": "config/groups.sample.json",
   "ref_date": "2026-10-09",
-  "sigma": {"floor": 12, "cap": 40},
+  "sigma": {"floor": 12, "cap": 40, "common_sd": 0},
   "simulation": {"n": 6000, "backtest_n": 3000, "seed": 21},
   "judge": {"ok": 0.8, "warn": 0.4},
   "dashboard": {
