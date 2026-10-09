@@ -14,9 +14,9 @@ SCORE_COLS = [
 NUMERIC_COLS = [c for c in SCORE_COLS if c[-1] in "표백등"]
 SUBJECT_COLS = ["국어", "수학", "영어", "탐1", "탐2"]
 
-# 시험 코드. 3~8월은 사설·교육청 모의고사, 6평·9평은 평가원 모의평가
+# 시험 코드. 3~5월과 7, 8월은 사설 모의고사(서로 출제처가 다름), 6평과 9평은 평가원 모의평가
 EARLY = ["3", "4", "5", "6평"]          # 3~6월
-PRIVATE = ["7", "8"]                    # 사설 실전 모의고사 (점수가 부풀려지는 경향)
+PRIVATE = ["7", "8"]                    # 7, 8월 사설 실전 모의고사 (백분위가 부풀려지는 경향)
 SEPT = "9평"
 SAT = "수능"
 EXAM_ORDER = {e: i for i, e in enumerate(EARLY + PRIVATE + [SEPT, "10", SAT])}
